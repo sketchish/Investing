@@ -181,8 +181,10 @@ const ZC = { Leading:'#22a06b', Weakening:'#f5a524', Lagging:'#e5484d', Improvin
 function drawRotation(){
   const rs = S.list.filter(r=>r.zone && r.daily_tracked);
   const W=360,H=300,P=26, xs=rs.map(r=>r.rs_3m), ys=rs.map(r=>r.rs_1m);
-  const mx=Math.max(5,...xs.map(Math.abs))*1.1, my=Math.max(3,...ys.map(Math.abs))*1.1;
-  const X=v=>P+(v+mx)/(2*mx)*(W-2*P), Y=v=>H-P-(v+my)/(2*my)*(H-2*P);
+  const q=(a,p)=>{ const s=a.map(Math.abs).sort((x,y)=>x-y); return s[Math.floor((s.length-1)*p)]||1; };
+  const mx=Math.max(3,q(xs,0.9))*1.25, my=Math.max(2,q(ys,0.9))*1.25;   // ignore extreme outliers so the cluster spreads out
+  const cl=(v,m)=>Math.max(-m*0.97,Math.min(m*0.97,v));
+  const X=v=>P+(cl(v,mx)+mx)/(2*mx)*(W-2*P), Y=v=>H-P-(cl(v,my)+my)/(2*my)*(H-2*P);
   let s = `<rect x="${X(0)}" y="${P}" width="${W-P-X(0)}" height="${Y(0)-P}" fill="#22a06b14"/><rect x="${X(0)}" y="${Y(0)}" width="${W-P-X(0)}" height="${H-P-Y(0)}" fill="#f5a52414"/>
     <rect x="${P}" y="${Y(0)}" width="${X(0)-P}" height="${H-P-Y(0)}" fill="#e5484d14"/><rect x="${P}" y="${P}" width="${X(0)-P}" height="${Y(0)-P}" fill="#4c8dff14"/>
     <line x1="${X(0)}" y1="${P}" x2="${X(0)}" y2="${H-P}" stroke="#394050"/><line x1="${P}" y1="${Y(0)}" x2="${W-P}" y2="${Y(0)}" stroke="#394050"/>
