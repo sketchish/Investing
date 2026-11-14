@@ -55,3 +55,14 @@ otr:
   test_pct: 1.5         # within 1.5% = a test (reports and charts)
   broken_pct: 3         # 5 EMA closes > 3% below the old top = level broken
   today_within_pct: 6   # Today screen: show sectors within 6% above an untested old top (plus tests in progress)
+
+# Trigger 2: PLT — Previous Low Test (second chance after an OTR bottom)
+plt:
+  enabled: true
+  swing_pct: 5          # a 5 EMA swing counts once the EMA reverses by this much
+  min_gap_pct: 4        # previous low must be at least this far below the recent high
+  heads_up_pct: 2       # heads-up: price comes within this % of the previous low (main signal)
+  test_pct: 1.5         # caution: the weekly 5 EMA itself comes within this % (low may break first)
+  broken_pct: 3         # broken: weekly 5 EMA more than this % below the previous low
+  max_weeks: 52         # setup expires if no pullback within a year of the recent high
+  today_within_pct: 6   # show on the Today screen when price is within this % of the previous low

@@ -10,7 +10,7 @@ on:
       mode:
         description: "What to run"
         type: choice
-        options: [daily, weekly, monthly, site, otr-test]
+        options: [daily, weekly, monthly, site, otr-test, plt-test]
         default: daily
 
 permissions:

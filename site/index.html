@@ -176,6 +176,11 @@ async function drawMain(){
     const lab = !tested ? `OTR ${z.top_week.slice(0,7)} – untested` : `OTR ${z.top_week.slice(0,7)} – ${z.state} (${z.kind.replace(' (deep buy)','')}, ${z.heads_up_date.slice(0,7)})`;
     main.zl.push(main.cs.createPriceLine({ price:z.level, color:col, lineWidth:1, lineStyle:2, axisLabelVisible:true, title:lab }));
   });
+  (d.plt||[]).filter(s=>s.prev_low && (s.stage==='waiting for pullback' || s.state==='in progress' || (s.heads_up_date && s.heads_up_date>=yearAgo))).forEach(s=>{
+    const col = s.state==='broken' ? '#ff5c5c' : (s.heads_up_date ? '#c084fc' : '#4cc9f0');
+    const lab = s.heads_up_date ? `PLT prev low ${s.prev_low_week.slice(0,7)} – ${s.state} (${s.kind.replace(/ \(.*\)/,'')}, ${s.heads_up_date.slice(0,7)})` : `PLT prev low ${s.prev_low_week.slice(0,7)} – waiting`;
+    main.zl.push(main.cs.createPriceLine({ price:s.prev_low, color:col, lineWidth:1, lineStyle:1, axisLabelVisible:true, title:lab }));
+  });
   main.mas.forEach(x=>main.pc.removeSeries(x.s)); main.mas = maLines(main.pc, rows, S.tf);
   const r = rsi(rows.map(x=>x[4]), S.settings.rsi.length||14);
   main.rs.setData(rows.map((x,i)=>r[i]==null?{time:x[0]}:{time:x[0], value:+r[i].toFixed(1)}));
@@ -208,7 +213,7 @@ function tileColor(v){ if(v==null) return '#1b1f27'; const a=Math.min(Math.abs(v
   return v>=0 ? `rgba(34,160,107,${0.15+0.6*a})` : `rgba(229,72,77,${0.15+0.6*a})`; }
 function tile(r){ const v=r[S.metric]; const arrow = r.d_above==null?'':(r.d_above?'▲':'▼')+(r.d_cross?'●':'');
   return `<div class="tile" style="background:${tileColor(v)}" data-s="${r.slug}"><div class="n">${r.name}${r.source==='etf'?' <span class="tag">ETF</span>':''}</div>
-    <div class="v">${fmtPct(v)}</div><div class="s"><span>${arrow} 5EMA</span><span>RSI ${r.rsi14??'–'}</span></div>${r.otr.dist}% away</div>`:''}</div>`; }
+    <div class="v">${fmtPct(v)}</div><div class="s"><span>${arrow} 5EMA</span><span>RSI ${r.rsi14??'–'}</span></div></div>`; }
 function nearTile(r){
   const o=r.otr, testing=o.state==='testing';
   const bg = testing ? 'rgba(245,165,36,.18)' : `rgba(34,160,107,${0.12+0.5*Math.max(0,1-o.dist/6)})`;
@@ -219,12 +224,26 @@ function nearTile(r){
     <div class="s"><span>Old top ${o.level.toLocaleString('en-IN',{maximumFractionDigits:0})} (${o.since})</span></div>
     <div class="s"><span>${status}</span></div>
     <div class="s"><span class="${cls(r.chg_1d)}">1D ${fmtPct(r.chg_1d)}</span><span>RSI ${r.rsi14??'–'}</span></div></div>`; }
+function pltTile(r){
+  const o=r.plt, testing=o.state==='testing';
+  const bg = testing ? 'rgba(192,132,252,.18)' : `rgba(76,201,240,${0.10+0.4*Math.max(0,1-Math.abs(o.dist)/6)})`;
+  const status = testing ? `Tested ${o.heads_up} · ${o.kind.startsWith('price')?'price test (strong)':'EMA reached low — may break first'}` : 'Waiting for pullback';
+  return `<div class="tile" style="background:${bg};min-height:112px" data-s="${r.slug}">
+    <div class="n">${r.name}${r.source==='etf'?' <span class="tag">ETF</span>':''}${r.daily_tracked?'':' <span class="tag">monthly</span>'}</div>
+    <div class="v">${o.dist>=0?'+':''}${o.dist.toFixed(1)}% <span style="font-size:12px;font-weight:500;opacity:.85">from previous low</span></div>
+    <div class="s"><span>Prev low ${o.level.toLocaleString('en-IN',{maximumFractionDigits:0})} (${o.since}) · high ${o.high.toLocaleString('en-IN',{maximumFractionDigits:0})}</span></div>
+    <div class="s"><span>${status}</span></div>
+    <div class="s"><span class="${cls(r.chg_1d)}">1D ${fmtPct(r.chg_1d)}</span><span>RSI ${r.rsi14??'–'}</span></div></div>`; }
 // One section per named trigger. New triggers get added to this list.
 const TRIGGERS = [
   { id:'otr', name:'OTR — Old Top Retest', tile:nearTile,
     desc:'Possible bottom: within 6% of an untested old weekly 5 EMA top, or testing one right now. Closest first. Tap to open the chart.',
     empty:'No sector is near an old rally top right now.',
     pick: list => list.filter(r=>!r.benchmark && r.otr).sort((a,b)=>Math.abs(a.otr.dist)-Math.abs(b.otr.dist)) },
+  { id:'plt', name:'PLT — Previous Low Test', tile:pltTile,
+    desc:'Second chance after an OTR bottom: the first rally made a high, now price is coming back to the previous low (or tested it in the last 3 months). Price test = strong. Closest first.',
+    empty:'No sector is near a previous low right now.',
+    pick: list => list.filter(r=>!r.benchmark && r.plt).sort((a,b)=>(a.plt.state==='testing')-(b.plt.state==='testing') || Math.abs(a.plt.dist)-Math.abs(b.plt.dist)) },
 ];
 function drawToday(){
   const b = S.list.find(r=>r.benchmark);

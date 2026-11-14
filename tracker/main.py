@@ -18,7 +18,7 @@ import yaml
 from . import fetch, notify
 from .indicators import resample, rsi, sma
 from .rules import applies_to, check
-from . import otr
+from . import otr, plt
 
 ROOT = fetch.ROOT
 SITE_DATA = ROOT / "site" / "data"
@@ -166,6 +166,30 @@ def otr_near(df: pd.DataFrame, wcfg: dict) -> dict:
     return {"otr": best} if best else {}
 
 
+def plt_near(df: pd.DataFrame, wcfg: dict) -> dict:
+    """For the Today screen: the PLT previous low this sector is near, if any."""
+    pc, rc = wcfg.get("plt") or {}, wcfg.get("otr") or {}
+    if not pc.get("enabled") or len(df) < 200:
+        return {}
+    within = float(pc.get("today_within_pct", 6))
+    close = float(df["close"].iloc[-1])
+    best = None
+    recent = (pd.Timestamp(df["date"].max()) - pd.Timedelta(weeks=13)).strftime("%Y-%m-%d")
+    for s in plt.live(df, pc, rc):
+        dist = (close / s["prev_low"] - 1) * 100
+        if s.get("heads_up_date"):
+            if s["heads_up_date"] < recent:          # tested more than 3 months ago: no longer "today"
+                continue
+        elif dist > within:
+            continue
+        cand = {"level": s["prev_low"], "since": s["prev_low_week"][:7], "high": s["high_ema"], "dist": round(dist, 2),
+                "state": "testing" if s.get("heads_up_date") else "waiting",
+                "kind": s.get("kind"), "heads_up": s.get("heads_up_date"), "low": s.get("low")}
+        if best is None or abs(cand["dist"]) < abs(best["dist"]):
+            best = cand
+    return {"plt": best} if best else {}
+
+
 def ma_state(df: pd.DataFrame, w: dict) -> dict:
     """Is the last finished candle above the first configured average, and did it just cross?"""
     from .indicators import ema as _ema
@@ -209,7 +233,9 @@ def build_site() -> None:
 
         w, m = resample(df, "W-FRI"), resample(df, "ME")
         zs = otr.levels(df, wcfg.get("otr") or {}) if ((wcfg.get("otr") or {}).get("enabled") and len(df) >= 200) else []
-        json.dump({"name": it["name"], "sector": it.get("sector", it.get("group", "")), "zones": zs,
+        pz = (plt.setups(df, wcfg.get("plt") or {}, wcfg.get("otr") or {})
+              if ((wcfg.get("plt") or {}).get("enabled") and len(df) >= 200) else [])
+        json.dump({"name": it["name"], "sector": it.get("sector", it.get("group", "")), "zones": zs, "plt": pz,
                    "source": source_of(it["name"]), "etf": it.get("etf"),
                    "daily": rows(df), "weekly": rows(w), "monthly": rows(m)},
                   open(SITE_DATA / f"{s}.json", "w"), separators=(",", ":"))
@@ -230,6 +256,7 @@ def build_site() -> None:
             "benchmark": bool(it.get("benchmark")),
             **ma_state(df, wcfg),
             **otr_near(df, wcfg),
+            **plt_near(df, wcfg),
             **({} if it.get("benchmark") else strength(df, bench)),
         })
     json.dump({"updated": datetime.now(IST).strftime("%d %b %Y %H:%M IST"), "indices": listing},
@@ -286,6 +313,66 @@ def otr_hits(items: list[dict]) -> list[dict]:
                          "detail": f"old weekly 5 EMA top {z['level']:,.2f} (week of {z['top_week']}); "
                                    f"today's low {z['heads_up_low']:,.2f}, weekly 5 EMA {z['heads_up_ema']:,.2f}"})
     return hits
+
+
+def plt_cfg() -> dict:
+    return watch().get("plt") or {}
+
+
+PLT_NAME = "PLT — Previous Low Test"
+
+
+def plt_hits(items: list[dict]) -> list[dict]:
+    pc, rc = plt_cfg(), otr_cfg()
+    if not pc.get("enabled"):
+        return []
+    hits = []
+    for it in items:
+        if it.get("benchmark"):
+            continue
+        df = candles(it["name"])
+        if df is None or len(df) < 200:
+            continue
+        last = df.iloc[-1]
+        base = {"index": it["name"], "date": last["date"].strftime("%d %b %Y"), "close": round(float(last["close"]), 2),
+                "source": source_of(it["name"]), "etf": it.get("etf")}
+        for s in plt.heads_up_today(df, pc, rc):
+            hits.append({**base, "rule": f"{PLT_NAME} heads-up: price within {pc.get('heads_up_pct', 2)}% of the previous low",
+                         "detail": f"previous low (weekly 5 EMA) {s['prev_low']:,.2f} ({s['prev_low_week'][:7]}); "
+                                   f"recent high {s['high_ema']:,.2f} ({s['high_week'][:7]}); OTR bottom {s['bottom_ema']:,.2f} "
+                                   f"({s['bottom_week'][:7]}); today's low {s['heads_up_low']:,.2f}"})
+        if datetime.now(IST).weekday() == 4:      # weekly candle closes on Friday
+            for s in plt.caution_this_week(df, pc, rc):
+                hits.append({**base, "rule": f"{PLT_NAME} caution: weekly 5 EMA reached the previous low (it may break before it bounces)",
+                             "detail": f"previous low {s['prev_low']:,.2f} ({s['prev_low_week'][:7]}); heads-up was {s['heads_up_date']}"})
+    return hits
+
+
+def plt_markdown(items: list[dict]) -> str:
+    pc, rc = plt_cfg(), otr_cfg()
+    within = float(pc.get("today_within_pct", 6))
+    live, wait = [], []
+    for it in items:
+        if it.get("benchmark"):
+            continue
+        df = candles(it["name"])
+        if df is None or len(df) < 200:
+            continue
+        close = float(df["close"].iloc[-1])
+        for s in plt.live(df, pc, rc):
+            dist = (close / s["prev_low"] - 1) * 100
+            if s.get("heads_up_date"):
+                live.append(f"| {it['name']} | {s['prev_low']:,.2f} ({s['prev_low_week'][:7]}) | {s['heads_up_date']} | "
+                            f"{s['low']:,.2f} | {s['kind']} | {dist:+.1f}% |")
+            elif dist <= within:
+                wait.append((dist, f"| {it['name']} | {close:,.2f} | {s['prev_low']:,.2f} ({s['prev_low_week'][:7]}) | "
+                                   f"{s['high_ema']:,.2f} ({s['high_week'][:7]}) | {dist:+.1f}% |"))
+    out = "**PLT tests in progress** (pulled back to the previous low in the last 6 months, low holding)\n\n"
+    out += ("| Sector | Previous low | Heads-up | Low | Type | Price vs low now |\n|---|---|---|---|---|---|\n" + "\n".join(live)) if live else "_None._"
+    out += f"\n\n**Getting close** (within {within}% of a previous low after an OTR bottom and first rally)\n\n"
+    out += ("| Sector | Close | Previous low | Recent high | Price above it |\n|---|---|---|---|---|\n" + "\n".join(r for _, r in sorted(wait))) if wait else "_None._"
+    out += "\n\n_Price test = strong (held 20 of 22 times since 2016). If the weekly 5 EMA also sinks to the low, it usually breaks first._\n"
+    return out
 
 
 def otr_markdown(items: list[dict], within: float = 6.0) -> str:
@@ -403,7 +490,7 @@ def mode_daily():
     items = cfg("daily.yaml")
     res = fetch.run(items)
     build_site()
-    hits = run_rules("daily", items) + otr_hits(items)
+    hits = run_rules("daily", items) + otr_hits(items) + plt_hits(items)
     failed = [r for r in res if r.error and not r.last]
     today = datetime.now(IST).strftime("%d %b %Y")
     md = f"## Daily sector alerts — {today}\n\n{hits_markdown(hits)}\n\nCharts: {site_link()}\n"
@@ -426,7 +513,8 @@ def mode_weekly():
     table = table_of_changes([i for i in items if not i.get("benchmark")], "weekly",
                              {"1W": 1, "4W": 4, "13W": 13, "52W": 52})
     md = (f"## Weekly sector review — week ending {today}\n\n### Alerts\n\n{hits_markdown(hits)}\n"
-          f"### OTR — possible bottoms\n\n{otr_markdown(items)}\n"
+          f"### OTR — Old Top Retest (possible bottoms)\n\n{otr_markdown(items)}\n"
+          f"### {PLT_NAME} (second chance after an OTR bottom)\n\n{plt_markdown(items)}\n"
           f"### Rotation vs Nifty 50\n\n{rotation_markdown(items)}\n"
           f"### All tracked sectors, best week first\n\n{table}\n\n_Trend = weekly close vs 20-week average._\n\n"
           f"Charts: {site_link()}\n")
@@ -476,6 +564,33 @@ def mode_otr_test():
     notify.send(f"TEST — OTR heads-ups, last 6 months ({len(hits)})", md, hits_text(hits) + f"\n{site_link()}", ["otr", "test"])
 
 
+def mode_plt_test():
+    """One-off: email every PLT heads-up of the last 6 months, to check the alert end to end."""
+    build_site()
+    pc, rc, since = plt_cfg(), otr_cfg(), (date.today() - timedelta(days=183)).isoformat()
+    hits = []
+    for it in all_items():
+        if it.get("benchmark"):
+            continue
+        df = candles(it["name"])
+        if df is None or len(df) < 200:
+            continue
+        for s in plt.setups(df, pc, rc):
+            if s.get("heads_up_date", "") >= since:
+                hits.append({"rule": f"{PLT_NAME} heads-up (replayed)", "index": it["name"],
+                             "date": pd.Timestamp(s["heads_up_date"]).strftime("%d %b %Y"),
+                             "close": s["heads_up_low"], "source": source_of(it["name"]), "etf": it.get("etf"),
+                             "detail": f"previous low {s['prev_low']:,.2f} ({s['prev_low_week'][:7]}) · recent high "
+                                       f"{s['high_ema']:,.2f} ({s['high_week'][:7]}) · {s['kind']} · low {s['low']:,.2f} · {s['state']}"})
+    hits.sort(key=lambda h: pd.Timestamp(h["date"]), reverse=True)
+    md = (f"## TEST — {PLT_NAME} heads-ups of the last 6 months\n\nThis is a one-off test. Each row is a day the PLT "
+          "heads-up would have been sent. The 'Close' column shows that day's low.\n\n" + hits_markdown(hits)
+          + f"\n### Today's PLT picture\n\n{plt_markdown(all_items())}\nCharts: {site_link()}\n")
+    write_report("plt-test", md)
+    notify.send(f"TEST — PLT (Previous Low Test) heads-ups, last 6 months ({len(hits)})", md,
+                hits_text(hits) + f"\n{site_link()}", ["plt", "test"])
+
+
 def mode_site():
     """Refresh candles (every index) and the website only — no alert emails."""
     fetch.run(all_items())
@@ -483,4 +598,5 @@ def mode_site():
 
 
 if __name__ == "__main__":
-    {"daily": mode_daily, "weekly": mode_weekly, "monthly": mode_monthly, "site": mode_site, "otr-test": mode_otr_test}[sys.argv[1]]()
+    {"daily": mode_daily, "weekly": mode_weekly, "monthly": mode_monthly, "site": mode_site, "otr-test": mode_otr_test,
+     "plt-test": mode_plt_test}[sys.argv[1]]()
