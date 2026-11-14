@@ -192,7 +192,7 @@ def write_report(mode: str, md: str) -> None:
 
 
 def site_link() -> str:
-    repo = os.getenv("GITHUB_REPOSITORY", "sketchish/sector-tracker")
+    repo = os.getenv("GITHUB_REPOSITORY", "sketchish/Investing")
     owner, name = repo.split("/")
     return SITE_URL.format(owner=owner, repo=name)
 

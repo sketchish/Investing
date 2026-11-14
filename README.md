@@ -1,9 +1,9 @@
-# Sector Tracker
+# Investing — Sector Tracker
 
 Tracks Indian sector indices as candle charts and sends alerts. Everything is free and open source,
 and runs automatically on GitHub — your computer does not need to be on.
 
-**Charts:** https://sketchish.github.io/sector-tracker/
+**Charts:** https://sketchish.github.io/Investing/
 
 ## What runs when
 
