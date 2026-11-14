@@ -54,3 +54,4 @@ otr:
   heads_up_pct: 2       # ALERT: first day price or 5 EMA comes within 2% of the untested old top
   test_pct: 1.5         # within 1.5% = a test (reports and charts)
   broken_pct: 3         # 5 EMA closes > 3% below the old top = level broken
+  today_within_pct: 6   # Today screen: show sectors within 6% above an untested old top (plus tests in progress)

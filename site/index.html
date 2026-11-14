@@ -75,10 +75,14 @@
 <main>
   <section class="view on" id="v-today">
     <div class="bench" id="bench"></div>
-    <div class="grid" id="tiles"></div>
-    <p class="muted" style="margin-top:10px">Tap a sector to open its chart. ▲/▼ = last daily close above/below your 5 EMA (● = crossed today). <span style="color:#f5d76e">OTR</span> = within 6% of an untested old weekly 5 EMA top (possible bottom zone). <span class="tag">ETF</span> = ETF price, no free index data.</p>
-    <h2>Monthly-only sectors</h2>
-    <div class="grid" id="tilesM"></div>
+    <div id="triggers"></div>
+    <div style="margin:16px 0 4px"><button id="showAll" class="seg" style="padding:8px 12px;color:var(--text);cursor:pointer">Show all sectors ▾</button></div>
+    <div id="allBox" style="display:none">
+      <div class="grid" id="tiles"></div>
+      <p class="muted" style="margin-top:10px">▲/▼ = last daily close above/below your 5 EMA (● = crossed today). <span class="tag">ETF</span> = ETF price, no free index data.</p>
+      <h2>Monthly-only sectors</h2>
+      <div class="grid" id="tilesM"></div>
+    </div>
   </section>
 
   <section class="view" id="v-rotation">
@@ -204,11 +208,31 @@ function tileColor(v){ if(v==null) return '#1b1f27'; const a=Math.min(Math.abs(v
   return v>=0 ? `rgba(34,160,107,${0.15+0.6*a})` : `rgba(229,72,77,${0.15+0.6*a})`; }
 function tile(r){ const v=r[S.metric]; const arrow = r.d_above==null?'':(r.d_above?'▲':'▼')+(r.d_cross?'●':'');
   return `<div class="tile" style="background:${tileColor(v)}" data-s="${r.slug}"><div class="n">${r.name}${r.source==='etf'?' <span class="tag">ETF</span>':''}</div>
-    <div class="v">${fmtPct(v)}</div><div class="s"><span>${arrow} 5EMA</span><span>RSI ${r.rsi14??'–'}</span></div>${r.otr && r.otr.dist<=6 ? `<div class="s" style="color:#f5d76e">OTR ${r.otr.since}: ${r.otr.dist>=0?'+':''}${r.otr.dist}% away</div>`:''}</div>`; }
+    <div class="v">${fmtPct(v)}</div><div class="s"><span>${arrow} 5EMA</span><span>RSI ${r.rsi14??'–'}</span></div>${r.otr.dist}% away</div>`:''}</div>`; }
+function nearTile(r){
+  const o=r.otr, testing=o.state==='testing';
+  const bg = testing ? 'rgba(245,165,36,.18)' : `rgba(34,160,107,${0.12+0.5*Math.max(0,1-o.dist/6)})`;
+  const status = testing ? `Testing now · ${o.kind.replace(' (deep buy)',' — deep buy')}` : 'Untested old top';
+  return `<div class="tile" style="background:${bg};min-height:112px" data-s="${r.slug}">
+    <div class="n">${r.name}${r.source==='etf'?' <span class="tag">ETF</span>':''}${r.daily_tracked?'':' <span class="tag">monthly</span>'}</div>
+    <div class="v">${o.dist>=0?'+':''}${o.dist.toFixed(1)}% <span style="font-size:12px;font-weight:500;opacity:.85">from old top</span></div>
+    <div class="s"><span>Old top ${o.level.toLocaleString('en-IN',{maximumFractionDigits:0})} (${o.since})</span></div>
+    <div class="s"><span>${status}</span></div>
+    <div class="s"><span class="${cls(r.chg_1d)}">1D ${fmtPct(r.chg_1d)}</span><span>RSI ${r.rsi14??'–'}</span></div></div>`; }
+// One section per named trigger. New triggers get added to this list.
+const TRIGGERS = [
+  { id:'otr', name:'OTR — Old Top Retest', tile:nearTile,
+    desc:'Possible bottom: within 6% of an untested old weekly 5 EMA top, or testing one right now. Closest first. Tap to open the chart.',
+    empty:'No sector is near an old rally top right now.',
+    pick: list => list.filter(r=>!r.benchmark && r.otr).sort((a,b)=>Math.abs(a.otr.dist)-Math.abs(b.otr.dist)) },
+];
 function drawToday(){
   const b = S.list.find(r=>r.benchmark);
   if(b) $('#bench').innerHTML = `<div><b>Nifty 50</b><div class="muted">${b.last_date}</div></div><div style="text-align:right"><b>${b.close.toLocaleString('en-IN')}</b><div class="${cls(b[S.metric==='rs_1m'?'chg_1m':S.metric])}">${fmtPct(b[S.metric==='rs_1m'?'chg_1m':S.metric])}</div></div>`;
   const sortF=(a,b)=>((b[S.metric]??-1e9)-(a[S.metric]??-1e9));
+  $('#triggers').innerHTML = TRIGGERS.map(tr=>{ const rs=tr.pick(S.list);
+    return `<h2 style="margin-top:4px">${tr.name} <span class="muted">(${rs.length})</span></h2><p class="muted" style="margin:-4px 0 10px">${tr.desc}</p>`+
+      `<div class="grid">${rs.length ? rs.map(tr.tile).join('') : `<div class="hint">${tr.empty}</div>`}</div>`; }).join('<div style="height:14px"></div>');
   $('#tiles').innerHTML = S.list.filter(r=>r.daily_tracked && !r.benchmark).sort(sortF).map(tile).join('');
   $('#tilesM').innerHTML = S.list.filter(r=>!r.daily_tracked).sort(sortF).map(tile).join('');
 }
@@ -265,6 +289,7 @@ function show(v){ S.view=v; document.querySelector('main').classList.toggle('wid
 function openChart(slug){ S.cur=slug; show('chart'); }
 document.addEventListener('click', e=>{ const t=e.target.closest('[data-s]'); if(t && !t.closest('nav')) openChart(t.dataset.s); });
 document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.v)));
+$('#showAll').addEventListener('click',()=>{ const box=$('#allBox'), open=box.style.display==='none'; box.style.display=open?'block':'none'; $('#showAll').textContent = open?'Hide all sectors ▴':'Show all sectors ▾'; });
 document.querySelectorAll('#metric button').forEach(b=>b.addEventListener('click',()=>{ S.metric=b.dataset.m; document.querySelectorAll('#metric button').forEach(x=>x.classList.toggle('on',x===b)); drawToday(); }));
 document.querySelectorAll('#tfSeg button').forEach(b=>b.addEventListener('click',()=>{ S.tf=b.dataset.tf; document.querySelectorAll('#tfSeg button').forEach(x=>x.classList.toggle('on',x===b)); drawMain(); history.replaceState(null,'',`#chart/${S.cur}/${S.tf}`); }));
 $('#pick').addEventListener('change', e=>{ S.cur=e.target.value; drawMain(); history.replaceState(null,'',`#chart/${S.cur}/${S.tf}`); });

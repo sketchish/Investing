@@ -144,6 +144,28 @@ def strength(df: pd.DataFrame, bench: pd.DataFrame | None, shift: int = 0) -> di
 
 
 
+def otr_near(df: pd.DataFrame, wcfg: dict) -> dict:
+    """For the Today screen: the old weekly 5 EMA top this sector is near, if any."""
+    rc = wcfg.get("otr") or {}
+    if not rc.get("enabled") or len(df) < 200:
+        return {}
+    within = float(rc.get("today_within_pct", 6))
+    close = float(df["close"].iloc[-1])
+    best = None
+    for z in otr.levels(df, rc):
+        dist = (close / z["level"] - 1) * 100
+        if z["status"] == "untested" and 0 <= dist <= within:
+            cand = {"level": z["level"], "since": z["top_week"][:7], "dist": round(dist, 2), "state": "untested"}
+        elif z.get("state") == "in progress" and abs(dist) <= within:
+            cand = {"level": z["level"], "since": z["top_week"][:7], "dist": round(dist, 2), "state": "testing",
+                    "kind": z["kind"], "heads_up": z["heads_up_date"], "low": z["low"], "bounce": z["bounce_pct"]}
+        else:
+            continue
+        if best is None or abs(cand["dist"]) < abs(best["dist"]):
+            best = cand
+    return {"otr": best} if best else {}
+
+
 def ma_state(df: pd.DataFrame, w: dict) -> dict:
     """Is the last finished candle above the first configured average, and did it just cross?"""
     from .indicators import ema as _ema
@@ -207,8 +229,7 @@ def build_site() -> None:
             "from_52w_high": pct(last, df["high"].tail(252).max()),
             "benchmark": bool(it.get("benchmark")),
             **ma_state(df, wcfg),
-            **({"otr": (lambda z: z and {"level": z["level"], "dist": z["distance_pct"], "since": z["top_week"][:7]})(
-                   otr.nearest_untested(df, wcfg.get("otr") or {}))} if ((wcfg.get("otr") or {}).get("enabled") and len(df) >= 200) else {}),
+            **otr_near(df, wcfg),
             **({} if it.get("benchmark") else strength(df, bench)),
         })
     json.dump({"updated": datetime.now(IST).strftime("%d %b %Y %H:%M IST"), "indices": listing},
