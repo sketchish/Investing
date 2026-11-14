@@ -1,0 +1,210 @@
+# The ~50 sector indices tracked every trading day.
+# For each one the tracker tries, in order:
+#   nifty -> official NSE index candles (niftyindices.com)
+#   yahoo -> Yahoo Finance index candles (backup)
+#   etf   -> the ETF's own candles on NSE (used when no index data is available, e.g. BSE indices, gold, silver)
+# To add an index: copy a block, change the names. 'nifty' must match the name on niftyindices.com exactly.
+indices:
+- name: Nifty Bank
+  sector: Banking
+  nifty: NIFTY BANK
+  yahoo: ^NSEBANK
+  etf: BANKBEES
+- name: BSE Top 10 Banks
+  sector: Banking
+  etf: BANK10ADD
+- name: Nifty Private Bank
+  sector: Private Banks
+  nifty: NIFTY PRIVATE BANK
+  yahoo: NIFTY_PVT_BANK.NS
+  etf: PVTBANIETF
+- name: BSE MidSmall Private Banks
+  sector: Private Banks
+  etf: MIDBANKADD
+- name: Nifty PSU Bank
+  sector: PSU Banks
+  nifty: NIFTY PSU BANK
+  yahoo: ^CNXPSUBANK
+  etf: PSUBANKADD
+- name: BSE PSU Bank
+  sector: PSU Banks
+  etf: SBIPSUBNK
+- name: Nifty Financial Services
+  sector: Financial Services
+  nifty: NIFTY FINANCIAL SERVICES
+  yahoo: NIFTY_FIN_SERVICE.NS
+  etf: BFSI
+- name: Nifty Fin. Services Ex-Bank
+  sector: Financial Services
+  nifty: NIFTY FINANCIAL SERVICES EX-BANK
+  etf: FINIETF
+- name: Nifty Capital Markets
+  sector: Financial Services
+  nifty: NIFTY CAPITAL MARKETS
+  etf: MOCAPITAL
+- name: BSE Insurance
+  sector: Financial Services
+  etf: INSUREIETF
+- name: BSE Capital Markets & Insurance
+  sector: Financial Services
+  etf: ECAPINSURE
+- name: Nifty IT
+  sector: IT / Technology
+  nifty: NIFTY IT
+  yahoo: ^CNXIT
+  etf: ITBEES
+- name: Nifty India Digital
+  sector: IT / Technology
+  nifty: NIFTY INDIA DIGITAL
+  etf: TNIDETF
+- name: Nifty India Internet
+  sector: IT / Technology
+  nifty: NIFTY INDIA INTERNET
+  etf: GROWWNET
+- name: Nifty Pharma
+  sector: Pharma & Healthcare
+  nifty: NIFTY PHARMA
+  yahoo: ^CNXPHARMA
+  etf: PHARMABEES
+- name: Nifty Healthcare
+  sector: Pharma & Healthcare
+  nifty: NIFTY HEALTHCARE
+  etf: HEALTHIETF
+- name: BSE Hospitals
+  sector: Pharma & Healthcare
+  etf: GROWWHOSPI
+- name: BSE Healthcare
+  sector: Pharma & Healthcare
+  etf: MOHEALTH
+- name: Nifty500 Healthcare
+  sector: Pharma & Healthcare
+  nifty: NIFTY500 HEALTHCARE
+  etf: HEALTHCARE
+- name: Nifty Auto
+  sector: Auto
+  nifty: NIFTY AUTO
+  yahoo: ^CNXAUTO
+  etf: AUTOBEES
+- name: Nifty EV & New Age Automotive
+  sector: Auto
+  nifty: NIFTY EV & NEW AGE AUTOMOTIVE
+  etf: EVINDIA
+- name: Nifty FMCG
+  sector: FMCG & Consumption
+  nifty: NIFTY FMCG
+  yahoo: ^CNXFMCG
+  etf: FMCGIETF
+- name: Nifty India Consumption
+  sector: FMCG & Consumption
+  nifty: NIFTY INDIA CONSUMPTION
+  yahoo: ^CNXCONSUM
+  etf: CONSUMBEES
+- name: Nifty India New Age Consumption
+  sector: FMCG & Consumption
+  nifty: NIFTY INDIA NEW AGE CONSUMPTION
+  etf: CONSUMER
+- name: Nifty India Tourism
+  sector: FMCG & Consumption
+  nifty: NIFTY INDIA TOURISM
+  etf: MOTOUR
+- name: Nifty Metal
+  sector: Metals & Mining
+  nifty: NIFTY METAL
+  yahoo: ^CNXMETAL
+  etf: METALIETF
+- name: Nifty Energy
+  sector: Energy, Oil & Power
+  nifty: NIFTY ENERGY
+  yahoo: ^CNXENERGY
+  etf: ENERGY
+- name: Nifty Oil & Gas
+  sector: Energy, Oil & Power
+  nifty: NIFTY OIL & GAS
+  etf: OILIETF
+- name: BSE Power
+  sector: Energy, Oil & Power
+  etf: GROWWPOWER
+- name: Nifty Infrastructure
+  sector: Infra, Capital Goods & Realty
+  nifty: NIFTY INFRASTRUCTURE
+  yahoo: ^CNXINFRA
+  etf: INFRAIETF
+- name: Nifty India Infra & Logistics
+  sector: Infra, Capital Goods & Realty
+  nifty: NIFTY INDIA INFRASTRUCTURE & LOGISTICS
+  etf: INFRA
+- name: BSE India Infrastructure
+  sector: Infra, Capital Goods & Realty
+  etf: MOINFRA
+- name: Nifty India Manufacturing
+  sector: Infra, Capital Goods & Realty
+  nifty: NIFTY INDIA MANUFACTURING
+  etf: MAKEINDIA
+- name: Nifty Realty
+  sector: Infra, Capital Goods & Realty
+  nifty: NIFTY REALTY
+  yahoo: ^CNXREALTY
+  etf: MOREALTY
+- name: Nifty Cement
+  sector: Infra, Capital Goods & Realty
+  nifty: NIFTY CEMENT
+  etf: CEMNTGROWW
+- name: Nifty Chemicals
+  sector: Chemicals
+  nifty: NIFTY CHEMICALS
+  etf: CHEMICAL
+- name: Nifty India Defence
+  sector: Defence
+  nifty: NIFTY INDIA DEFENCE
+  etf: MODEFENCE
+- name: BSE India Defence
+  sector: Defence
+  etf: DEFENCE
+- name: Nifty CPSE
+  sector: PSU / Govt
+  nifty: NIFTY CPSE
+  etf: CPSEETF
+- name: BSE Bharat 22
+  sector: PSU / Govt
+  etf: ICICIB22
+- name: Nifty PSE
+  sector: PSU / Govt
+  nifty: NIFTY PSE
+  yahoo: ^CNXPSE
+  etf: ABSLPSE
+- name: Nifty India Railways PSU
+  sector: PSU / Govt
+  nifty: NIFTY INDIA RAILWAYS PSU
+  etf: GROWWRAIL
+- name: Nifty Commodities
+  sector: Multi-sector themes
+  nifty: NIFTY COMMODITIES
+  yahoo: ^CNXCMDTY
+  etf: COMMOIETF
+- name: Nifty MNC
+  sector: Multi-sector themes
+  nifty: NIFTY MNC
+  yahoo: ^CNXMNC
+  etf: MNC
+- name: Nifty Services Sector
+  sector: Multi-sector themes
+  nifty: NIFTY SERVICES SECTOR
+  yahoo: ^CNXSERVICE
+  etf: MOSERVICE
+- name: Nifty Growth Sectors 15
+  sector: Multi-sector themes
+  nifty: NIFTY GROWTH SECTORS 15
+  etf: HDFCGROWTH
+- name: Nifty100 ESG Sector Leaders
+  sector: Multi-sector themes
+  nifty: NIFTY100 ESG SECTOR LEADERS
+  etf: ESG
+- name: BSE Select IPO
+  sector: Multi-sector themes
+  etf: SELECTIPO
+- name: Gold (domestic)
+  sector: Commodity – Gold
+  etf: GOLDBEES
+- name: Silver (domestic)
+  sector: Commodity – Silver
+  etf: SILVERBEES

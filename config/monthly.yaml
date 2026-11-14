@@ -1,0 +1,301 @@
+# Every sector/thematic index, refreshed once a month (1st trading day).
+# NSE indices come from niftyindices.com. BSE indices have no free official feed,
+# so the ones with an ETF are tracked through that ETF; the rest are listed in the monthly report as 'no free data'.
+indices:
+- name: Nifty Auto
+  group: NSE sectoral
+  nifty: NIFTY AUTO
+- name: Nifty Bank
+  group: NSE sectoral
+  nifty: NIFTY BANK
+- name: Nifty Capital Goods
+  group: NSE sectoral
+  nifty: NIFTY CAPITAL GOODS
+- name: Nifty Cement
+  group: NSE sectoral
+  nifty: NIFTY CEMENT
+- name: Nifty Chemicals
+  group: NSE sectoral
+  nifty: NIFTY CHEMICALS
+- name: Nifty Commercial & Transport Services
+  group: NSE sectoral
+  nifty: NIFTY COMMERCIAL & TRANSPORT SERVICES
+- name: Nifty Construction
+  group: NSE sectoral
+  nifty: NIFTY CONSTRUCTION
+- name: Nifty Consumer Durables
+  group: NSE sectoral
+  nifty: NIFTY CONSUMER DURABLES
+- name: Nifty Consumer Services
+  group: NSE sectoral
+  nifty: NIFTY CONSUMER SERVICES
+- name: Nifty Financial Services
+  group: NSE sectoral
+  nifty: NIFTY FINANCIAL SERVICES
+- name: Nifty Financial Services 25/50
+  group: NSE sectoral
+  nifty: NIFTY FINANCIAL SERVICES 25/50
+- name: Nifty Financial Services Ex-Bank
+  group: NSE sectoral
+  nifty: NIFTY FINANCIAL SERVICES EX-BANK
+- name: Nifty FMCG
+  group: NSE sectoral
+  nifty: NIFTY FMCG
+- name: Nifty Healthcare
+  group: NSE sectoral
+  nifty: NIFTY HEALTHCARE
+- name: Nifty Hospitals
+  group: NSE sectoral
+  nifty: NIFTY HOSPITALS
+- name: Nifty Housing Finance
+  group: NSE sectoral
+  nifty: NIFTY HOUSING FINANCE
+- name: Nifty Insurance
+  group: NSE sectoral
+  nifty: NIFTY INSURANCE
+- name: Nifty IT
+  group: NSE sectoral
+  nifty: NIFTY IT
+- name: Nifty Media
+  group: NSE sectoral
+  nifty: NIFTY MEDIA
+- name: Nifty Metal
+  group: NSE sectoral
+  nifty: NIFTY METAL
+- name: Nifty Midsmall Financial Services
+  group: NSE sectoral
+  nifty: NIFTY MIDSMALL FINANCIAL SERVICES
+- name: Nifty Midsmall Healthcare
+  group: NSE sectoral
+  nifty: NIFTY MIDSMALL HEALTHCARE
+- name: Nifty Midsmall IT & Telecom
+  group: NSE sectoral
+  nifty: NIFTY MIDSMALL IT & TELECOM
+- name: Nifty NBFC
+  group: NSE sectoral
+  nifty: NIFTY NBFC
+- name: Nifty Oil & Gas
+  group: NSE sectoral
+  nifty: NIFTY OIL & GAS
+- name: Nifty Pharma
+  group: NSE sectoral
+  nifty: NIFTY PHARMA
+- name: Nifty Power
+  group: NSE sectoral
+  nifty: NIFTY POWER
+- name: Nifty Private Bank
+  group: NSE sectoral
+  nifty: NIFTY PRIVATE BANK
+- name: Nifty PSU Bank
+  group: NSE sectoral
+  nifty: NIFTY PSU BANK
+- name: Nifty Realty
+  group: NSE sectoral
+  nifty: NIFTY REALTY
+- name: Nifty REITs & Realty
+  group: NSE sectoral
+  nifty: NIFTY REITS & REALTY
+- name: Nifty Retail
+  group: NSE sectoral
+  nifty: NIFTY RETAIL
+- name: Nifty Telecommunications
+  group: NSE sectoral
+  nifty: NIFTY TELECOMMUNICATIONS
+- name: Nifty500 Healthcare
+  group: NSE sectoral
+  nifty: NIFTY500 HEALTHCARE
+- name: Nifty AI Catalysts
+  group: NSE thematic
+  nifty: NIFTY AI CATALYSTS
+- name: Nifty Capital Markets
+  group: NSE thematic
+  nifty: NIFTY CAPITAL MARKETS
+- name: Nifty Commodities
+  group: NSE thematic
+  nifty: NIFTY COMMODITIES
+- name: Nifty Conglomerate 50
+  group: NSE thematic
+  nifty: NIFTY CONGLOMERATE 50
+- name: Nifty Core Housing
+  group: NSE thematic
+  nifty: NIFTY CORE HOUSING
+- name: Nifty CPSE
+  group: NSE thematic
+  nifty: NIFTY CPSE
+- name: Nifty Energy
+  group: NSE thematic
+  nifty: NIFTY ENERGY
+- name: Nifty EV & New Age Automotive
+  group: NSE thematic
+  nifty: NIFTY EV & NEW AGE AUTOMOTIVE
+- name: Nifty Housing
+  group: NSE thematic
+  nifty: NIFTY HOUSING
+- name: Nifty India Consumption
+  group: NSE thematic
+  nifty: NIFTY INDIA CONSUMPTION
+- name: Nifty India Corporate Group Index - Aditya Birla Group
+  group: NSE thematic
+  nifty: NIFTY INDIA CORPORATE GROUP INDEX - ADITYA BIRLA GROUP
+- name: Nifty India Corporate Group Index - Mahindra Group
+  group: NSE thematic
+  nifty: NIFTY INDIA CORPORATE GROUP INDEX - MAHINDRA GROUP
+- name: Nifty India Corporate Group Index - Tata Group
+  group: NSE thematic
+  nifty: NIFTY INDIA CORPORATE GROUP INDEX - TATA GROUP
+- name: Nifty India Corporate Group Index - Tata Group 25% Cap
+  group: NSE thematic
+  nifty: NIFTY INDIA CORPORATE GROUP INDEX - TATA GROUP 25% CAP
+- name: Nifty India Defence
+  group: NSE thematic
+  nifty: NIFTY INDIA DEFENCE
+- name: Nifty India Defence Equal Weight
+  group: NSE thematic
+  nifty: NIFTY INDIA DEFENCE EQUAL WEIGHT
+- name: Nifty India Digital
+  group: NSE thematic
+  nifty: NIFTY INDIA DIGITAL
+- name: Nifty India Infrastructure & Logistics
+  group: NSE thematic
+  nifty: NIFTY INDIA INFRASTRUCTURE & LOGISTICS
+- name: Nifty India Internet
+  group: NSE thematic
+  nifty: NIFTY INDIA INTERNET
+- name: Nifty India Manufacturing
+  group: NSE thematic
+  nifty: NIFTY INDIA MANUFACTURING
+- name: Nifty India New Age Consumption
+  group: NSE thematic
+  nifty: NIFTY INDIA NEW AGE CONSUMPTION
+- name: Nifty India Railways PSU
+  group: NSE thematic
+  nifty: NIFTY INDIA RAILWAYS PSU
+- name: Nifty India Select 5 Corporate Groups (MAATR)
+  group: NSE thematic
+  nifty: NIFTY INDIA SELECT 5 CORPORATE GROUPS (MAATR)
+- name: Nifty India Tourism
+  group: NSE thematic
+  nifty: NIFTY INDIA TOURISM
+- name: Nifty Infrastructure
+  group: NSE thematic
+  nifty: NIFTY INFRASTRUCTURE
+- name: Nifty IPO
+  group: NSE thematic
+  nifty: NIFTY IPO
+- name: Nifty Midcap Liquid 15
+  group: NSE thematic
+  nifty: NIFTY MIDCAP LIQUID 15
+- name: Nifty Midsmall India Consumption
+  group: NSE thematic
+  nifty: NIFTY MIDSMALL INDIA CONSUMPTION
+- name: Nifty MNC
+  group: NSE thematic
+  nifty: NIFTY MNC
+- name: Nifty Mobility
+  group: NSE thematic
+  nifty: NIFTY MOBILITY
+- name: Nifty Non-Cyclical Consumer
+  group: NSE thematic
+  nifty: NIFTY NON-CYCLICAL CONSUMER
+- name: Nifty PSE
+  group: NSE thematic
+  nifty: NIFTY PSE
+- name: Nifty REITs & InvITs
+  group: NSE thematic
+  nifty: NIFTY REITS & INVITS
+- name: Nifty REITs & InvITs 90:10
+  group: NSE thematic
+  nifty: NIFTY REITS & INVITS 90:10
+- name: Nifty Rural
+  group: NSE thematic
+  nifty: NIFTY RURAL
+- name: Nifty Services Sector
+  group: NSE thematic
+  nifty: NIFTY SERVICES SECTOR
+- name: Nifty Shariah 25
+  group: NSE thematic
+  nifty: NIFTY SHARIAH 25
+- name: Nifty Small Finance Banks & Microfinance Institutions
+  group: NSE thematic
+  nifty: NIFTY SMALL FINANCE BANKS & MICROFINANCE INSTITUTIONS
+- name: Nifty SME Emerge
+  group: NSE thematic
+  nifty: NIFTY SME EMERGE
+- name: Nifty Sugar & Ethanol
+  group: NSE thematic
+  nifty: NIFTY SUGAR & ETHANOL
+- name: Nifty Transportation & Logistics
+  group: NSE thematic
+  nifty: NIFTY TRANSPORTATION & LOGISTICS
+- name: Nifty Waves
+  group: NSE thematic
+  nifty: NIFTY WAVES
+- name: Nifty100 Enhanced ESG
+  group: NSE thematic
+  nifty: NIFTY100 ENHANCED ESG
+- name: Nifty100 ESG
+  group: NSE thematic
+  nifty: NIFTY100 ESG
+- name: Nifty100 ESG Sector Leaders
+  group: NSE thematic
+  nifty: NIFTY100 ESG SECTOR LEADERS
+- name: Nifty100 Liquid 15
+  group: NSE thematic
+  nifty: NIFTY100 LIQUID 15
+- name: Nifty50 Shariah
+  group: NSE thematic
+  nifty: NIFTY50 SHARIAH
+- name: Nifty500 Ahimsa
+  group: NSE thematic
+  nifty: NIFTY500 AHIMSA
+- name: Nifty500 Multicap India Manufacturing 50:30:20
+  group: NSE thematic
+  nifty: NIFTY500 MULTICAP INDIA MANUFACTURING 50:30:20
+- name: Nifty500 Multicap Infrastructure 50:30:20
+  group: NSE thematic
+  nifty: NIFTY500 MULTICAP INFRASTRUCTURE 50:30:20
+- name: Nifty500 Shariah
+  group: NSE thematic
+  nifty: NIFTY500 SHARIAH
+- name: BSE Top 10 Banks
+  group: BSE / commodity (ETF proxy)
+  etf: BANK10ADD
+- name: BSE MidSmall Private Banks
+  group: BSE / commodity (ETF proxy)
+  etf: MIDBANKADD
+- name: BSE PSU Bank
+  group: BSE / commodity (ETF proxy)
+  etf: SBIPSUBNK
+- name: BSE Insurance
+  group: BSE / commodity (ETF proxy)
+  etf: INSUREIETF
+- name: BSE Capital Markets & Insurance
+  group: BSE / commodity (ETF proxy)
+  etf: ECAPINSURE
+- name: BSE Hospitals
+  group: BSE / commodity (ETF proxy)
+  etf: GROWWHOSPI
+- name: BSE Healthcare
+  group: BSE / commodity (ETF proxy)
+  etf: MOHEALTH
+- name: BSE Power
+  group: BSE / commodity (ETF proxy)
+  etf: GROWWPOWER
+- name: BSE India Infrastructure
+  group: BSE / commodity (ETF proxy)
+  etf: MOINFRA
+- name: BSE India Defence
+  group: BSE / commodity (ETF proxy)
+  etf: DEFENCE
+- name: BSE Bharat 22
+  group: BSE / commodity (ETF proxy)
+  etf: ICICIB22
+- name: BSE Select IPO
+  group: BSE / commodity (ETF proxy)
+  etf: SELECTIPO
+- name: Gold (domestic)
+  group: BSE / commodity (ETF proxy)
+  etf: GOLDBEES
+- name: Silver (domestic)
+  group: BSE / commodity (ETF proxy)
+  etf: SILVERBEES

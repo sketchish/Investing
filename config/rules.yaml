@@ -1,0 +1,63 @@
+# Alert rules. Each rule is checked on the latest candle of every tracked index.
+#
+#   name:       what the alert email will say
+#   timeframe:  daily   -> checked every trading evening
+#               weekly  -> checked on Saturday morning, on the finished weekly candle
+#               monthly -> checked on the 1st, on the finished monthly candle
+#   when:       the condition. You can use:
+#                 open, high, low, close, volume
+#                 sma(close, 50)  ema(close, 20)  rsi(close, 14)
+#                 highest(high, 252)  lowest(low, 252)  prev(close, 1)  pct_change(close, 5)
+#                 cross_above(a, b)  cross_below(a, b)
+#               and normal maths / comparisons: >  <  >=  <=  and  or  not
+#   indices:    all  (default)  or a list of names exactly as in config/daily.yaml
+#   enabled:    true / false
+#
+# These are STARTER rules so the system has something to check. Tell Claude your own
+# rules in plain words and they will be added here.
+
+rules:
+  - name: Close crossed ABOVE the 50-day average (trend turning up)
+    timeframe: daily
+    when: cross_above(close, sma(close, 50))
+    enabled: true
+
+  - name: Close crossed BELOW the 50-day average (trend turning down)
+    timeframe: daily
+    when: cross_below(close, sma(close, 50))
+    enabled: true
+
+  - name: RSI(14) dropped below 30 (oversold)
+    timeframe: daily
+    when: cross_below(rsi(close, 14), 30)
+    enabled: true
+
+  - name: RSI(14) rose above 70 (overbought)
+    timeframe: daily
+    when: cross_above(rsi(close, 14), 70)
+    enabled: true
+
+  - name: New 52-week closing high
+    timeframe: daily
+    when: close >= highest(close, 252) and prev(close) < highest(prev(close), 252)
+    enabled: true
+
+  - name: Weekly close crossed ABOVE the 20-week average
+    timeframe: weekly
+    when: cross_above(close, sma(close, 20))
+    enabled: true
+
+  - name: Weekly close crossed BELOW the 20-week average
+    timeframe: weekly
+    when: cross_below(close, sma(close, 20))
+    enabled: true
+
+  - name: Monthly close crossed ABOVE the 10-month average
+    timeframe: monthly
+    when: cross_above(close, sma(close, 10))
+    enabled: true
+
+  - name: Monthly close crossed BELOW the 10-month average
+    timeframe: monthly
+    when: cross_below(close, sma(close, 10))
+    enabled: true

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sector Tracker — Indian sector index candles</title>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+  :root { --bg:#0f1115; --panel:#171a21; --line:#262b36; --text:#e6e8ee; --muted:#8b93a7; --up:#22a06b; --down:#e5484d; --accent:#4c8dff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { padding:14px 16px; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  header h1 { font-size:17px; margin:0 12px 0 0; }
+  .muted { color:var(--muted); font-size:12px; }
+  select, button, input { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:7px 10px; font:inherit; }
+  button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .wrap { display:grid; grid-template-columns: 1fr; gap:0; }
+  #chartBox { height:58vh; min-height:360px; position:relative; }
+  #legend { position:absolute; left:12px; top:8px; z-index:3; font-size:12px; pointer-events:none; }
+  #legend b { font-size:15px; }
+  .tabs { display:flex; gap:6px; }
+  .tablewrap { padding:12px 16px 40px; overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; min-width:760px; font-size:13px; }
+  th, td { padding:7px 8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+  th { color:var(--muted); font-weight:600; cursor:pointer; position:sticky; top:0; background:var(--bg); }
+  td:first-child, th:first-child, td:nth-child(2), th:nth-child(2) { text-align:left; }
+  tr:hover td { background:var(--panel); cursor:pointer; }
+  .pos { color:var(--up); } .neg { color:var(--down); }
+  .tag { font-size:11px; padding:1px 6px; border-radius:6px; background:#262b36; color:var(--muted); margin-left:6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sector Tracker</h1>
+  <select id="pick" aria-label="Choose index"></select>
+  <div class="tabs" role="group" aria-label="Candle size">
+    <button data-tf="daily" class="on">Daily</button>
+    <button data-tf="weekly">Weekly</button>
+    <button data-tf="monthly">Monthly</button>
+  </div>
+  <label class="muted"><input type="checkbox" id="ma" checked> Moving averages</label>
+  <span class="muted" id="updated"></span>
+</header>
+<div class="wrap">
+  <div id="chartBox"><div id="legend"></div></div>
+  <div class="tablewrap">
+    <div class="muted" style="margin-bottom:8px">Click a row to chart it. Click a column title to sort. <span class="tag">ETF</span> = chart uses the ETF's price because no free index data exists.</div>
+    <table id="tbl"><thead></thead><tbody></tbody></table>
+  </div>
+</div>
+<script>
+const MA = { daily:[[20,'#f5a524'],[50,'#4c8dff'],[200,'#c084fc']], weekly:[[10,'#f5a524'],[20,'#4c8dff'],[50,'#c084fc']], monthly:[[6,'#f5a524'],[10,'#4c8dff'],[20,'#c084fc']] };
+let list = [], cur = null, tf = 'daily', cache = {}, sortKey = 'chg_1d', sortDir = -1;
+const box = document.getElementById('chartBox');
+const chart = LightweightCharts.createChart(box, {
+  layout:{ background:{ color:'#0f1115' }, textColor:'#c9cfdc' },
+  grid:{ vertLines:{ color:'#1d212b' }, horzLines:{ color:'#1d212b' } },
+  rightPriceScale:{ borderColor:'#262b36' }, timeScale:{ borderColor:'#262b36' },
+  crosshair:{ mode: 0 }, autoSize:true });
+const candles = chart.addCandlestickSeries({ upColor:'#22a06b', downColor:'#e5484d', wickUpColor:'#22a06b', wickDownColor:'#e5484d', borderVisible:false });
+let maSeries = [];
+
+function smaOf(rows, n){ const out=[]; let s=0; for(let i=0;i<rows.length;i++){ s+=rows[i][4]; if(i>=n) s-=rows[i-n][4]; if(i>=n-1) out.push({time:rows[i][0], value:+(s/n).toFixed(2)}); } return out; }
+const fmt = v => v==null ? '' : `<span class="${v>=0?'pos':'neg'}">${v>0?'+':''}${v.toFixed(2)}%</span>`;
+
+async function load(slug){
+  if(!cache[slug]) cache[slug] = await (await fetch(`data/${slug}.json`)).json();
+  return cache[slug];
+}
+async function draw(){
+  const d = await load(cur); const rows = d[tf];
+  candles.setData(rows.map(r=>({time:r[0], open:r[1], high:r[2], low:r[3], close:r[4]})));
+  maSeries.forEach(s=>chart.removeSeries(s)); maSeries=[];
+  if(document.getElementById('ma').checked){
+    for(const [n,col] of MA[tf]){ const s=chart.addLineSeries({color:col, lineWidth:1, priceLineVisible:false, lastValueVisible:false}); s.setData(smaOf(rows,n)); maSeries.push(s); }
+  }
+  chart.timeScale().fitContent();
+  const last = rows[rows.length-1];
+  const src = d.source==='etf' ? `<span class="tag">ETF ${d.etf}</span>` : '';
+  const mas = document.getElementById('ma').checked ? MA[tf].map(([n,c])=>`<span style="color:${c}">${n}</span>`).join(' · ')+` ${tf==='daily'?'day':tf==='weekly'?'week':'month'} avg` : '';
+  document.getElementById('legend').innerHTML = `<b>${d.name}</b>${src}<br>${last[0]} · O ${last[1]} H ${last[2]} L ${last[3]} C ${last[4]}<br>${mas}`;
+  history.replaceState(null,'',`#${cur}/${tf}`);
+}
+const COLS = [['name','Index'],['sector','Sector'],['close','Close'],['chg_1d','1D'],['chg_1w','1W'],['chg_1m','1M'],['chg_1y','1Y'],['rsi14','RSI 14'],['from_52w_high','From 52W high'],['above_50dma','> 50 DMA'],['above_200dma','> 200 DMA'],['last_date','Data date']];
+function table(){
+  const th = COLS.map(([k,l])=>`<th data-k="${k}">${l}${sortKey===k?(sortDir<0?' ▼':' ▲'):''}</th>`).join('');
+  document.querySelector('#tbl thead').innerHTML = `<tr>${th}</tr>`;
+  const rows = [...list].sort((a,b)=>{ const x=a[sortKey], y=b[sortKey]; if(x==null) return 1; if(y==null) return -1; return (x>y?1:x<y?-1:0)*sortDir; });
+  document.querySelector('#tbl tbody').innerHTML = rows.map(r=>`<tr data-s="${r.slug}">`+COLS.map(([k])=>{
+    let v=r[k];
+    if(k.startsWith('chg_')||k==='from_52w_high') return `<td>${fmt(v)}</td>`;
+    if(k.startsWith('above_')) return `<td>${v==null?'':v?'<span class="pos">yes</span>':'<span class="neg">no</span>'}</td>`;
+    if(k==='name') return `<td>${v}${r.source==='etf'?'<span class="tag">ETF</span>':''}${r.daily_tracked?'':'<span class="tag">monthly</span>'}</td>`;
+    return `<td>${v??''}</td>`; }).join('')+'</tr>').join('');
+}
+document.querySelector('#tbl thead').addEventListener('click',e=>{ const k=e.target.closest('th')?.dataset.k; if(!k) return; sortDir = sortKey===k ? -sortDir : -1; sortKey=k; table(); });
+document.querySelector('#tbl tbody').addEventListener('click',e=>{ const s=e.target.closest('tr')?.dataset.s; if(s){ cur=s; document.getElementById('pick').value=s; draw(); window.scrollTo({top:0,behavior:'smooth'}); } });
+document.getElementById('pick').addEventListener('change',e=>{ cur=e.target.value; draw(); });
+document.getElementById('ma').addEventListener('change',draw);
+document.querySelectorAll('[data-tf]').forEach(b=>b.addEventListener('click',()=>{ tf=b.dataset.tf; document.querySelectorAll('[data-tf]').forEach(x=>x.classList.toggle('on',x===b)); draw(); }));
+
+(async()=>{
+  const idx = await (await fetch('data/index.json')).json();
+  list = idx.indices; document.getElementById('updated').textContent = 'Updated ' + idx.updated;
+  const groups = {}; list.forEach(r=>{ const g = r.daily_tracked ? 'Tracked daily' : 'Monthly only'; (groups[g]=groups[g]||[]).push(r); });
+  document.getElementById('pick').innerHTML = Object.entries(groups).map(([g,rs])=>`<optgroup label="${g}">`+rs.sort((a,b)=>a.name.localeCompare(b.name)).map(r=>`<option value="${r.slug}">${r.name}</option>`).join('')+'</optgroup>').join('');
+  const [h, htf] = location.hash.slice(1).split('/');
+  cur = list.some(r=>r.slug===h) ? h : (list.find(r=>r.slug==='nifty-bank')||list[0]).slug;
+  if(htf && MA[htf]){ tf=htf; document.querySelectorAll('[data-tf]').forEach(x=>x.classList.toggle('on',x.dataset.tf===tf)); }
+  document.getElementById('pick').value = cur;
+  table(); draw();
+})();
+</script>
+</body>
+</html>
