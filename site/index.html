@@ -129,7 +129,7 @@ const UP='#22a06b', DN='#e5484d', BG='#0f1115';
 function hollow(rows){ return rows.map((r,i)=>{ const prev=i?rows[i-1][4]:r[1]; const col=r[4]>=prev?UP:DN; const bull=r[4]>=r[1];
   return { time:r[0], open:r[1], high:r[2], low:r[3], close:r[4], color: bull?'rgba(0,0,0,0)':col, borderColor:col, wickColor:col }; }); }
 const chartOpts = h => ({ layout:{ background:{color:BG}, textColor:'#c9cfdc', fontSize:11 }, grid:{ vertLines:{visible:false}, horzLines:{visible:false} },
-  rightPriceScale:{ borderColor:'#262b36', minimumWidth:78 }, timeScale:{ borderColor:'#262b36', rightOffset:3 }, crosshair:{ mode:0 }, autoSize:true, handleScale:{ axisPressedMouseMove:false } });
+  rightPriceScale:{ borderColor:'#262b36', minimumWidth:78 }, timeScale:{ borderColor:'#262b36', rightOffset:3 }, crosshair:{ mode:0 }, autoSize:true, handleScale:{ axisPressedMouseMove:{ time:true, price:true }, axisDoubleClickReset:true, mouseWheel:true, pinch:true } });
 function candleSeries(ch){ return ch.addCandlestickSeries({ upColor:'rgba(0,0,0,0)', downColor:DN, borderVisible:true, wickVisible:true, priceLineVisible:false }); }
 function maLines(ch, rows, tf){ const closes=rows.map(r=>r[4]); return (S.settings.moving_averages[tf]||[]).map(m=>{
   const vals = (m.type||'SMA').toUpperCase()==='EMA' ? ema(closes,m.length) : sma(closes,m.length);
