@@ -431,6 +431,7 @@ def mode_monthly():
 
 def mode_otr_test():
     """One-off: email every OTR heads-up of the last 6 months, to check the alert end to end."""
+    build_site()
     rc, since = otr_cfg(), (date.today() - timedelta(days=183)).isoformat()
     hits = []
     for it in cfg("daily.yaml"):
