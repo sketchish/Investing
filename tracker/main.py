@@ -74,10 +74,105 @@ def pct(a, b):
     return None if (a is None or b in (None, 0) or pd.isna(a) or pd.isna(b)) else round((a / b - 1) * 100, 2)
 
 
+
+def watch() -> dict:
+    return yaml.safe_load(open(ROOT / "config" / "watch.yaml"))
+
+
+def ma_expr(tf: str, length: int, w: dict | None = None) -> tuple[str, str]:
+    """Return (formula, label) for the configured average of this length."""
+    w = w or watch()
+    for m in w["moving_averages"].get(tf, []):
+        if int(m["length"]) == int(length):
+            kind = m.get("type", "SMA").upper()
+            break
+    else:
+        kind = "SMA"
+    unit = {"daily": "day", "weekly": "week", "monthly": "month"}[tf]
+    return f"{kind.lower()}(close, {int(length)})", f"{length}-{unit} {kind}"
+
+
+def ma_rules(tf: str) -> list[dict]:
+    w = watch()
+    cfg_tf = (w.get("ma_alerts") or {}).get(tf) or {}
+    out = []
+    for n in cfg_tf.get("price_cross", []) or []:
+        e, lab = ma_expr(tf, n, w)
+        out.append({"name": f"Close crossed ABOVE the {lab}", "when": f"cross_above(close, {e})"})
+        out.append({"name": f"Close crossed BELOW the {lab}", "when": f"cross_below(close, {e})"})
+    for fast, slow in cfg_tf.get("ma_cross", []) or []:
+        ef, lf = ma_expr(tf, fast, w)
+        es, ls = ma_expr(tf, slow, w)
+        out.append({"name": f"{lf} crossed ABOVE {ls}", "when": f"cross_above({ef}, {es})"})
+        out.append({"name": f"{lf} crossed BELOW {ls}", "when": f"cross_below({ef}, {es})"})
+    near = cfg_tf.get("near_ma")
+    if near:
+        k = 1 + float(near.get("within_pct", 1.0)) / 100
+        for n in near.get("lengths", []):
+            e, lab = ma_expr(tf, n, w)
+            out.append({"name": f"Pulled back to within {near.get('within_pct', 1.0)}% of the {lab}",
+                        "when": f"close > {e} and close <= {e} * {k} and prev(close) > prev({e}) * {k}"})
+    scope = None
+    if w.get("alert_scope", "watchlist") == "watchlist" and w.get("watchlist"):
+        scope = list(w["watchlist"])
+    for r in out:
+        r["timeframe"] = tf
+        r["indices"] = scope or "all"
+    return out
+
+
+QUADS = {(True, True): "Leading", (True, False): "Weakening", (False, False): "Lagging", (False, True): "Improving"}
+
+
+def strength(df: pd.DataFrame, bench: pd.DataFrame | None, shift: int = 0) -> dict:
+    """Relative strength vs Nifty 50: % out/under-performance and rotation zone."""
+    if bench is None:
+        return {}
+    a = df.set_index("date")["close"]
+    b = bench.set_index("date")["close"]
+    rs = (a / b).dropna()
+    if shift:
+        rs = rs.iloc[:-shift]
+    if len(rs) < 70:
+        return {}
+    def ch(n):
+        return round((rs.iloc[-1] / rs.iloc[-1 - n] - 1) * 100, 2)
+    out = {"rs_1w": ch(5), "rs_1m": ch(21), "rs_3m": ch(63)}
+    out["zone"] = QUADS[(out["rs_3m"] > 0, out["rs_1m"] > 0)]
+    return out
+
+
+
+def ma_state(df: pd.DataFrame, w: dict) -> dict:
+    """Is the last finished candle above the first configured average, and did it just cross?"""
+    from .indicators import ema as _ema
+    out = {}
+    for tf in ("daily", "weekly"):
+        mas = w["moving_averages"].get(tf) or []
+        if not mas:
+            continue
+        m = mas[0]
+        f = frame(df, tf)
+        if tf == "weekly" and len(f) and f["date"].iloc[-1].weekday() != 4 and datetime.now(IST).weekday() < 5:
+            f = f.iloc[:-1]          # this week's candle is not finished yet
+        c = f["close"].astype(float)
+        if len(c) < int(m["length"]) + 2:
+            continue
+        line = _ema(c, int(m["length"])) if m.get("type", "SMA").upper() == "EMA" else sma(c, int(m["length"]))
+        above, was = bool(c.iloc[-1] > line.iloc[-1]), bool(c.iloc[-2] > line.iloc[-2])
+        out[f"{tf[0]}_above"] = above
+        out[f"{tf[0]}_cross"] = "up" if above and not was else ("down" if was and not above else None)
+    return out
+
 # ------------------------------------------------------------------ site data
 def build_site() -> None:
     SITE_DATA.mkdir(parents=True, exist_ok=True)
     daily_names = {it["name"] for it in cfg("daily.yaml")}
+    bench_item = next((it for it in cfg("daily.yaml") if it.get("benchmark")), None)
+    bench = candles(bench_item["name"]) if bench_item else None
+    wcfg = watch()
+    json.dump({"moving_averages": wcfg["moving_averages"], "rsi": wcfg.get("rsi", {"length": 14}),
+               "watchlist": wcfg.get("watchlist") or []}, open(SITE_DATA / "settings.json", "w"))
     listing = []
     for it in all_items():
         df = candles(it["name"])
@@ -109,6 +204,9 @@ def build_site() -> None:
             "above_50dma": bool(last > sma(c, 50).iloc[-1]) if len(c) >= 50 else None,
             "above_200dma": bool(last > sma(c, 200).iloc[-1]) if len(c) >= 200 else None,
             "from_52w_high": pct(last, df["high"].tail(252).max()),
+            "benchmark": bool(it.get("benchmark")),
+            **ma_state(df, wcfg),
+            **({} if it.get("benchmark") else strength(df, bench)),
         })
     json.dump({"updated": datetime.now(IST).strftime("%d %b %Y %H:%M IST"), "indices": listing},
               open(SITE_DATA / "index.json", "w"), indent=0)
@@ -118,9 +216,11 @@ def build_site() -> None:
 # ------------------------------------------------------------------ alerts
 def run_rules(tf: str, items: list[dict]) -> list[dict]:
     rules = [r for r in yaml.safe_load(open(ROOT / "config" / "rules.yaml"))["rules"]
-             if r.get("enabled", True) and r.get("timeframe", "daily") == tf]
+             if r.get("enabled", True) and r.get("timeframe", "daily") == tf] + ma_rules(tf)
     hits = []
     for it in items:
+        if it.get("benchmark"):
+            continue
         df = candles(it["name"])
         if df is None:
             continue
@@ -186,6 +286,33 @@ def table_of_changes(items: list[dict], tf: str, periods: dict[str, int]) -> str
     return "\n".join(lines)
 
 
+
+def rotation_markdown(items: list[dict]) -> str:
+    bench_item = next((it for it in items if it.get("benchmark")), None)
+    bench = candles(bench_item["name"]) if bench_item else None
+    if bench is None:
+        return "_Benchmark data missing._\n"
+    now, moved = {z: [] for z in QUADS.values()}, []
+    for it in items:
+        if it.get("benchmark"):
+            continue
+        df = candles(it["name"])
+        if df is None:
+            continue
+        s, s0 = strength(df, bench), strength(df, bench, shift=5)
+        if not s:
+            continue
+        now[s["zone"]].append(f"{it['name']} ({s['rs_1m']:+.1f}% vs Nifty, 1M)")
+        if s0 and s0["zone"] != s["zone"]:
+            moved.append(f"- **{it['name']}**: {s0['zone']} → **{s['zone']}**")
+    out = []
+    if moved:
+        out.append("**Moved zone this week**\n\n" + "\n".join(moved) + "\n")
+    for z, hint in [("Improving", "watch for new opportunities"), ("Leading", "strong and getting stronger"),
+                    ("Weakening", "strong but losing pace"), ("Lagging", "weak")]:
+        out.append(f"**{z}** — {hint}: " + (", ".join(now[z]) if now[z] else "none"))
+    return "\n\n".join(out) + "\n\n_Zone = 3-month trend × 1-month momentum of the sector's strength vs Nifty 50._\n"
+
 def write_report(mode: str, md: str) -> None:
     REPORTS.mkdir(exist_ok=True)
     (REPORTS / f"{date.today().isoformat()}-{mode}.md").write_text(md)
@@ -222,8 +349,10 @@ def mode_weekly():
     build_site()
     hits = run_rules("weekly", items)
     today = datetime.now(IST).strftime("%d %b %Y")
-    table = table_of_changes(items, "weekly", {"1W": 1, "4W": 4, "13W": 13, "52W": 52})
+    table = table_of_changes([i for i in items if not i.get("benchmark")], "weekly",
+                             {"1W": 1, "4W": 4, "13W": 13, "52W": 52})
     md = (f"## Weekly sector review — week ending {today}\n\n### Alerts\n\n{hits_markdown(hits)}\n"
+          f"### Rotation vs Nifty 50\n\n{rotation_markdown(items)}\n"
           f"### All tracked sectors, best week first\n\n{table}\n\n_Trend = weekly close vs 20-week average._\n\n"
           f"Charts: {site_link()}\n")
     write_report("weekly", md)
@@ -246,5 +375,11 @@ def mode_monthly():
                 hits_text(hits) + f"\nFull table: {site_link()}", ["monthly"])
 
 
+def mode_site():
+    """Refresh candles and the website only — no alert emails."""
+    fetch.run(cfg("daily.yaml"))
+    build_site()
+
+
 if __name__ == "__main__":
-    {"daily": mode_daily, "weekly": mode_weekly, "monthly": mode_monthly, "site": build_site}[sys.argv[1]]()
+    {"daily": mode_daily, "weekly": mode_weekly, "monthly": mode_monthly, "site": mode_site}[sys.argv[1]]()

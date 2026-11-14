@@ -1,0 +1,39 @@
+# YOUR SETUP — moving average, MA alerts and watchlist.
+# The charts draw exactly these averages, and the MA alerts use them.
+# Tell Claude your setup in plain words and it will update this file.
+#
+# Current setup (from Chirag's TradingView indicator):
+#   EMA, length 5, source = Close, offset 0, no smoothing,
+#   timeframe = same as the chart, wait for the candle to close.
+# Alerts are only checked on finished candles (daily after market close,
+# weekly on Saturday, monthly on the 1st) — the same as "wait for timeframe closes".
+
+moving_averages:
+  daily:
+    - { type: EMA, length: 5, color: "#4c8dff" }
+  weekly:
+    - { type: EMA, length: 5, color: "#4c8dff" }
+  monthly:
+    - { type: EMA, length: 5, color: "#4c8dff" }
+
+# Which moving-average events send an alert (per candle size).
+# PAUSED: Chirag will describe exactly when the 5 EMA alert should fire.
+# Available building blocks (examples):
+#   price_cross: [5]          -> candle CLOSES above / below the 5 EMA
+#   ma_cross: [[5, 20]]       -> one average crosses another
+#   near_ma: { lengths: [5], within_pct: 1.0 } -> close pulls back to within 1% of the average
+ma_alerts: {}
+
+# Who gets MA alerts:
+#   watchlist -> only the sectors listed below (falls back to all 50 while the list is empty)
+#   all       -> every sector tracked daily
+alert_scope: watchlist
+
+# Your watchlist (names exactly as in config/daily.yaml). Shown as the Watchlist tab on the site.
+watchlist: []
+
+# RSI shown under every chart
+rsi:
+  length: 14
+  overbought: 70
+  oversold: 30

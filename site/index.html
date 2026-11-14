@@ -2,113 +2,245 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sector Tracker — Indian sector index candles</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Investing — Sector Tracker</title>
 <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 <style>
   :root { --bg:#0f1115; --panel:#171a21; --line:#262b36; --text:#e6e8ee; --muted:#8b93a7; --up:#22a06b; --down:#e5484d; --accent:#4c8dff; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-  header { padding:14px 16px; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
-  header h1 { font-size:17px; margin:0 12px 0 0; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; background:var(--bg); color:var(--text); font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { position:sticky; top:0; z-index:10; background:var(--bg); padding:calc(10px + env(safe-area-inset-top)) 14px 8px; border-bottom:1px solid var(--line); }
+  header .row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  h1 { font-size:17px; margin:0; flex:1; }
   .muted { color:var(--muted); font-size:12px; }
-  select, button, input { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:7px 10px; font:inherit; }
-  button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
-  .wrap { display:grid; grid-template-columns: 1fr; gap:0; }
-  #chartBox { height:58vh; min-height:360px; position:relative; }
-  #legend { position:absolute; left:12px; top:8px; z-index:3; font-size:12px; pointer-events:none; }
-  #legend b { font-size:15px; }
-  .tabs { display:flex; gap:6px; }
-  .tablewrap { padding:12px 16px 40px; overflow-x:auto; }
-  table { border-collapse:collapse; width:100%; min-width:760px; font-size:13px; }
-  th, td { padding:7px 8px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
-  th { color:var(--muted); font-weight:600; cursor:pointer; position:sticky; top:0; background:var(--bg); }
-  td:first-child, th:first-child, td:nth-child(2), th:nth-child(2) { text-align:left; }
-  tr:hover td { background:var(--panel); cursor:pointer; }
+  .seg { display:inline-flex; background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:2px; }
+  .seg button { background:none; border:0; color:var(--muted); padding:6px 10px; border-radius:7px; font:inherit; font-size:13px; }
+  .seg button.on { background:var(--accent); color:#fff; }
+  main { padding:12px 14px calc(80px + env(safe-area-inset-bottom)); max-width:1100px; margin:0 auto; }
+  nav { position:fixed; bottom:0; left:0; right:0; z-index:10; display:flex; background:#12151b; border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom); }
+  nav button { flex:1; background:none; border:0; color:var(--muted); padding:10px 0 8px; font:inherit; font-size:12px; }
+  nav button.on { color:var(--accent); }
+  nav svg { display:block; margin:0 auto 3px; width:22px; height:22px; }
+  .view { display:none; } .view.on { display:block; }
+  .bench { display:flex; justify-content:space-between; align-items:baseline; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:12px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
+  .tile { border-radius:10px; padding:9px 10px; min-height:74px; display:flex; flex-direction:column; justify-content:space-between; cursor:pointer; border:1px solid rgba(255,255,255,.06); }
+  .tile .n { font-size:13px; font-weight:600; line-height:1.2; }
+  .tile .v { font-size:17px; font-weight:700; }
+  .tile .s { font-size:11px; opacity:.85; display:flex; justify-content:space-between; }
   .pos { color:var(--up); } .neg { color:var(--down); }
-  .tag { font-size:11px; padding:1px 6px; border-radius:6px; background:#262b36; color:var(--muted); margin-left:6px; }
+  .tag { font-size:10px; padding:1px 5px; border-radius:5px; background:rgba(0,0,0,.25); }
+  h2 { font-size:15px; margin:18px 0 8px; }
+  .zones { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .zone { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px; }
+  .zone h3 { margin:0 0 2px; font-size:14px; } .zone p { margin:0 0 8px; }
+  .chip { display:flex; justify-content:space-between; gap:6px; padding:6px 0; border-top:1px solid var(--line); font-size:13px; cursor:pointer; }
+  #scatter { width:100%; height:auto; background:var(--panel); border:1px solid var(--line); border-radius:12px; }
+  .mini { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px; margin-bottom:10px; }
+  .mini .hd { display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px; cursor:pointer; }
+  .mini .box { height:170px; }
+  .minis { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:10px; }
+  #chartWrap { position:relative; }
+  #priceBox { height:52vh; min-height:300px; }
+  #rsiBox { height:20vh; min-height:110px; border-top:1px solid var(--line); }
+  #legend { position:absolute; left:8px; top:6px; z-index:3; font-size:12px; pointer-events:none; text-shadow:0 0 4px #000; }
+  #legend b { font-size:14px; }
+  .rsiLbl { position:absolute; left:8px; z-index:3; font-size:11px; color:var(--muted); pointer-events:none; }
+  select { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:9px; padding:7px 8px; font:inherit; font-size:14px; max-width:100%; }
+  .hint { background:var(--panel); border:1px dashed var(--line); border-radius:12px; padding:12px; color:var(--muted); font-size:13px; }
 </style>
 </head>
 <body>
 <header>
-  <h1>Sector Tracker</h1>
-  <select id="pick" aria-label="Choose index"></select>
-  <div class="tabs" role="group" aria-label="Candle size">
-    <button data-tf="daily" class="on">Daily</button>
-    <button data-tf="weekly">Weekly</button>
-    <button data-tf="monthly">Monthly</button>
+  <div class="row"><h1 id="title">Today</h1><span class="muted" id="updated"></span></div>
+  <div class="row" id="todayCtl" style="margin-top:8px">
+    <div class="seg" id="metric">
+      <button data-m="chg_1d" class="on">1D</button><button data-m="chg_1w">1W</button><button data-m="chg_1m">1M</button><button data-m="rs_1m">vs Nifty 1M</button>
+    </div>
   </div>
-  <label class="muted"><input type="checkbox" id="ma" checked> Moving averages</label>
-  <span class="muted" id="updated"></span>
+  <div class="row" id="chartCtl" style="margin-top:8px;display:none">
+    <select id="pick" aria-label="Choose index"></select>
+    <div class="seg" id="tfSeg"><button data-tf="daily" class="on">D</button><button data-tf="weekly">W</button><button data-tf="monthly">M</button></div>
+  </div>
 </header>
-<div class="wrap">
-  <div id="chartBox"><div id="legend"></div></div>
-  <div class="tablewrap">
-    <div class="muted" style="margin-bottom:8px">Click a row to chart it. Click a column title to sort. <span class="tag">ETF</span> = chart uses the ETF's price because no free index data exists.</div>
-    <table id="tbl"><thead></thead><tbody></tbody></table>
-  </div>
-</div>
+
+<main>
+  <section class="view on" id="v-today">
+    <div class="bench" id="bench"></div>
+    <div class="grid" id="tiles"></div>
+    <p class="muted" style="margin-top:10px">Tap a sector to open its chart. ▲/▼ = last daily close above/below your 5 EMA (● = crossed today). <span class="tag">ETF</span> = ETF price, no free index data.</p>
+    <h2>Monthly-only sectors</h2>
+    <div class="grid" id="tilesM"></div>
+  </section>
+
+  <section class="view" id="v-rotation">
+    <p class="muted" style="margin-top:0">Each sector's strength vs Nifty 50. Right = beating Nifty over 3 months. Up = gaining over the last month. Sectors move clockwise: <b>Improving → Leading → Weakening → Lagging</b>. Improving is where new opportunities usually start.</p>
+    <svg id="scatter" viewBox="0 0 360 300" role="img" aria-label="Rotation map"></svg>
+    <div class="zones" id="zones" style="margin-top:10px"></div>
+  </section>
+
+  <section class="view" id="v-watch">
+    <div id="watchHint" class="hint" style="display:none"></div>
+    <div class="minis" id="minis"></div>
+  </section>
+
+  <section class="view" id="v-chart">
+    <div id="chartWrap">
+      <div id="legend"></div>
+      <div id="priceBox"></div>
+      <div style="position:relative"><span class="rsiLbl" id="rsiLbl" style="top:4px"></span><div id="rsiBox"></div></div>
+    </div>
+    <p class="muted">Hollow candle = closed above its open, filled = closed below its open. Green/red = higher/lower than the previous close.</p>
+  </section>
+</main>
+
+<nav>
+  <button data-v="today" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Today</button>
+  <button data-v="rotation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>Rotation</button>
+  <button data-v="watch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Watchlist</button>
+  <button data-v="chart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4v16M6 8h-2v6h2M12 2v20M12 6h-2v8h2M18 6v14M18 10h-2v5h2"/></svg>Chart</button>
+</nav>
+
 <script>
-const MA = { daily:[[20,'#f5a524'],[50,'#4c8dff'],[200,'#c084fc']], weekly:[[10,'#f5a524'],[20,'#4c8dff'],[50,'#c084fc']], monthly:[[6,'#f5a524'],[10,'#4c8dff'],[20,'#c084fc']] };
-let list = [], cur = null, tf = 'daily', cache = {}, sortKey = 'chg_1d', sortDir = -1;
-const box = document.getElementById('chartBox');
-const chart = LightweightCharts.createChart(box, {
-  layout:{ background:{ color:'#0f1115' }, textColor:'#c9cfdc' },
-  grid:{ vertLines:{ color:'#1d212b' }, horzLines:{ color:'#1d212b' } },
-  rightPriceScale:{ borderColor:'#262b36' }, timeScale:{ borderColor:'#262b36' },
-  crosshair:{ mode: 0 }, autoSize:true });
-const candles = chart.addCandlestickSeries({ upColor:'#22a06b', downColor:'#e5484d', wickUpColor:'#22a06b', wickDownColor:'#e5484d', borderVisible:false });
-let maSeries = [];
+const S = { list:[], settings:null, cache:{}, view:'today', metric:'chg_1d', cur:null, tf:'daily' };
+const $ = s => document.querySelector(s);
+const fmtPct = v => v==null ? '–' : `${v>0?'+':''}${v.toFixed(2)}%`;
+const cls = v => v==null ? '' : v>=0 ? 'pos' : 'neg';
 
-function smaOf(rows, n){ const out=[]; let s=0; for(let i=0;i<rows.length;i++){ s+=rows[i][4]; if(i>=n) s-=rows[i-n][4]; if(i>=n-1) out.push({time:rows[i][0], value:+(s/n).toFixed(2)}); } return out; }
-const fmt = v => v==null ? '' : `<span class="${v>=0?'pos':'neg'}">${v>0?'+':''}${v.toFixed(2)}%</span>`;
+// ---------- maths
+function ema(vals,n){ const k=2/(n+1); const out=new Array(vals.length).fill(null); let prev=null, sum=0;
+  for(let i=0;i<vals.length;i++){ if(i<n-1){ sum+=vals[i]; continue; } if(i===n-1){ sum+=vals[i]; prev=sum/n; } else prev=vals[i]*k+prev*(1-k); out[i]=prev; } return out; }
+function sma(vals,n){ const out=new Array(vals.length).fill(null); let s=0; for(let i=0;i<vals.length;i++){ s+=vals[i]; if(i>=n) s-=vals[i-n]; if(i>=n-1) out[i]=s/n; } return out; }
+function rsi(vals,n){ const out=new Array(vals.length).fill(null); let up=0, dn=0;
+  for(let i=1;i<vals.length;i++){ const d=vals[i]-vals[i-1], u=Math.max(d,0), l=Math.max(-d,0);
+    if(i<=n){ up+=u/n; dn+=l/n; if(i===n) out[i]= dn===0?100:100-100/(1+up/dn); }
+    else { up=(up*(n-1)+u)/n; dn=(dn*(n-1)+l)/n; out[i]= dn===0?100:100-100/(1+up/dn); } } return out; }
 
-async function load(slug){
-  if(!cache[slug]) cache[slug] = await (await fetch(`data/${slug}.json`)).json();
-  return cache[slug];
+// ---------- hollow candles
+const UP='#22a06b', DN='#e5484d', BG='#0f1115';
+function hollow(rows){ return rows.map((r,i)=>{ const prev=i?rows[i-1][4]:r[1]; const col=r[4]>=prev?UP:DN; const bull=r[4]>=r[1];
+  return { time:r[0], open:r[1], high:r[2], low:r[3], close:r[4], color: bull?'rgba(0,0,0,0)':col, borderColor:col, wickColor:col }; }); }
+const chartOpts = h => ({ layout:{ background:{color:BG}, textColor:'#c9cfdc', fontSize:11 }, grid:{ vertLines:{visible:false}, horzLines:{visible:false} },
+  rightPriceScale:{ borderColor:'#262b36' }, timeScale:{ borderColor:'#262b36', rightOffset:3 }, crosshair:{ mode:0 }, autoSize:true, handleScale:{ axisPressedMouseMove:false } });
+function candleSeries(ch){ return ch.addCandlestickSeries({ upColor:'rgba(0,0,0,0)', downColor:DN, borderVisible:true, wickVisible:true, priceLineVisible:false }); }
+function maLines(ch, rows, tf){ const closes=rows.map(r=>r[4]); return (S.settings.moving_averages[tf]||[]).map(m=>{
+  const vals = (m.type||'SMA').toUpperCase()==='EMA' ? ema(closes,m.length) : sma(closes,m.length);
+  const s=ch.addLineSeries({ color:m.color||'#4c8dff', lineWidth:2, priceLineVisible:false, lastValueVisible:false, crosshairMarkerVisible:false });
+  s.setData(rows.map((r,i)=>vals[i]==null?null:{time:r[0], value:+vals[i].toFixed(2)}).filter(Boolean)); return {s, m}; }); }
+async function load(slug){ if(!S.cache[slug]) S.cache[slug]=await (await fetch(`data/${slug}.json`)).json(); return S.cache[slug]; }
+
+// ---------- main chart (price + RSI, synced)
+let main=null;
+function buildMain(){
+  const pc = LightweightCharts.createChart($('#priceBox'), chartOpts());
+  const rc = LightweightCharts.createChart($('#rsiBox'), {...chartOpts(), timeScale:{ borderColor:'#262b36', visible:true, rightOffset:3 }});
+  pc.timeScale().applyOptions({ visible:false });
+  const cs = candleSeries(pc);
+  const rs = rc.addLineSeries({ color:'#c084fc', lineWidth:1.5, priceLineVisible:false, lastValueVisible:true });
+  rs.createPriceLine({ price:S.settings.rsi.overbought||70, color:'#e5484d80', lineWidth:1, lineStyle:2, axisLabelVisible:false });
+  rs.createPriceLine({ price:S.settings.rsi.oversold||30, color:'#22a06b80', lineWidth:1, lineStyle:2, axisLabelVisible:false });
+  rc.priceScale('right').applyOptions({ scaleMargins:{ top:0.1, bottom:0.1 } });
+  let lock=false; const sync=(a,b)=>a.timeScale().subscribeVisibleLogicalRangeChange(r=>{ if(lock||!r) return; lock=true; b.timeScale().setVisibleLogicalRange(r); lock=false; });
+  sync(pc,rc); sync(rc,pc);
+  main = { pc, rc, cs, rs, mas:[] };
 }
-async function draw(){
-  const d = await load(cur); const rows = d[tf];
-  candles.setData(rows.map(r=>({time:r[0], open:r[1], high:r[2], low:r[3], close:r[4]})));
-  maSeries.forEach(s=>chart.removeSeries(s)); maSeries=[];
-  if(document.getElementById('ma').checked){
-    for(const [n,col] of MA[tf]){ const s=chart.addLineSeries({color:col, lineWidth:1, priceLineVisible:false, lastValueVisible:false}); s.setData(smaOf(rows,n)); maSeries.push(s); }
+async function drawMain(){
+  if(!main) buildMain();
+  const d = await load(S.cur); const rows = d[S.tf];
+  main.cs.setData(hollow(rows));
+  main.mas.forEach(x=>main.pc.removeSeries(x.s)); main.mas = maLines(main.pc, rows, S.tf);
+  const r = rsi(rows.map(x=>x[4]), S.settings.rsi.length||14);
+  main.rs.setData(rows.map((x,i)=>r[i]==null?null:{time:x[0], value:+r[i].toFixed(1)}).filter(Boolean));
+  const n=rows.length; main.pc.timeScale().setVisibleLogicalRange({ from:Math.max(0,n-(S.tf==='daily'?130:S.tf==='weekly'?104:72)), to:n+2 });
+  const last=rows[n-1], prev=rows[n-2]||last, ch=(last[4]/prev[4]-1)*100;
+  const unit={daily:'D',weekly:'W',monthly:'M'}[S.tf];
+  $('#legend').innerHTML = `<b>${d.name}</b> ${d.source==='etf'?`<span class="tag">ETF ${d.etf}</span>`:''}<br>${last[0]} · C ${last[4].toLocaleString('en-IN')} <span class="${cls(ch)}">${fmtPct(ch)}</span><br>`+
+    main.mas.map(x=>`<span style="color:${x.m.color}">${x.m.type} ${x.m.length}${unit}</span>`).join(' ');
+  $('#rsiLbl').textContent = `RSI ${S.settings.rsi.length||14}: ${r[n-1]==null?'–':r[n-1].toFixed(1)}`;
+  $('#pick').value = S.cur;
+}
+
+// ---------- today
+function tileColor(v){ if(v==null) return '#1b1f27'; const a=Math.min(Math.abs(v)/(S.metric==='chg_1d'?2.5:S.metric==='chg_1w'?5:10),1);
+  return v>=0 ? `rgba(34,160,107,${0.15+0.6*a})` : `rgba(229,72,77,${0.15+0.6*a})`; }
+function tile(r){ const v=r[S.metric]; const arrow = r.d_above==null?'':(r.d_above?'▲':'▼')+(r.d_cross?'●':'');
+  return `<div class="tile" style="background:${tileColor(v)}" data-s="${r.slug}"><div class="n">${r.name}${r.source==='etf'?' <span class="tag">ETF</span>':''}</div>
+    <div class="v">${fmtPct(v)}</div><div class="s"><span>${arrow} 5EMA</span><span>RSI ${r.rsi14??'–'}</span></div></div>`; }
+function drawToday(){
+  const b = S.list.find(r=>r.benchmark);
+  if(b) $('#bench').innerHTML = `<div><b>Nifty 50</b><div class="muted">${b.last_date}</div></div><div style="text-align:right"><b>${b.close.toLocaleString('en-IN')}</b><div class="${cls(b[S.metric==='rs_1m'?'chg_1m':S.metric])}">${fmtPct(b[S.metric==='rs_1m'?'chg_1m':S.metric])}</div></div>`;
+  const sortF=(a,b)=>((b[S.metric]??-1e9)-(a[S.metric]??-1e9));
+  $('#tiles').innerHTML = S.list.filter(r=>r.daily_tracked && !r.benchmark).sort(sortF).map(tile).join('');
+  $('#tilesM').innerHTML = S.list.filter(r=>!r.daily_tracked).sort(sortF).map(tile).join('');
+}
+
+// ---------- rotation
+const ZC = { Leading:'#22a06b', Weakening:'#f5a524', Lagging:'#e5484d', Improving:'#4c8dff' };
+function drawRotation(){
+  const rs = S.list.filter(r=>r.zone && r.daily_tracked);
+  const W=360,H=300,P=26, xs=rs.map(r=>r.rs_3m), ys=rs.map(r=>r.rs_1m);
+  const mx=Math.max(5,...xs.map(Math.abs))*1.1, my=Math.max(3,...ys.map(Math.abs))*1.1;
+  const X=v=>P+(v+mx)/(2*mx)*(W-2*P), Y=v=>H-P-(v+my)/(2*my)*(H-2*P);
+  let s = `<rect x="${X(0)}" y="${P}" width="${W-P-X(0)}" height="${Y(0)-P}" fill="#22a06b14"/><rect x="${X(0)}" y="${Y(0)}" width="${W-P-X(0)}" height="${H-P-Y(0)}" fill="#f5a52414"/>
+    <rect x="${P}" y="${Y(0)}" width="${X(0)-P}" height="${H-P-Y(0)}" fill="#e5484d14"/><rect x="${P}" y="${P}" width="${X(0)-P}" height="${Y(0)-P}" fill="#4c8dff14"/>
+    <line x1="${X(0)}" y1="${P}" x2="${X(0)}" y2="${H-P}" stroke="#394050"/><line x1="${P}" y1="${Y(0)}" x2="${W-P}" y2="${Y(0)}" stroke="#394050"/>
+    <text x="${W-P-4}" y="${P+12}" text-anchor="end" fill="#22a06b" font-size="11">Leading</text><text x="${W-P-4}" y="${H-P-6}" text-anchor="end" fill="#f5a524" font-size="11">Weakening</text>
+    <text x="${P+4}" y="${H-P-6}" fill="#e5484d" font-size="11">Lagging</text><text x="${P+4}" y="${P+12}" fill="#4c8dff" font-size="11">Improving</text>
+    <text x="${W/2}" y="${H-6}" text-anchor="middle" fill="#8b93a7" font-size="10">3-month strength vs Nifty →</text>
+    <text x="10" y="${H/2}" fill="#8b93a7" font-size="10" transform="rotate(-90 10 ${H/2})" text-anchor="middle">1-month momentum →</text>`;
+  rs.forEach(r=>{ s+=`<g data-s="${r.slug}" style="cursor:pointer"><circle cx="${X(r.rs_3m)}" cy="${Y(r.rs_1m)}" r="5" fill="${ZC[r.zone]}"/><title>${r.name}: 3M ${fmtPct(r.rs_3m)}, 1M ${fmtPct(r.rs_1m)}</title></g>`; });
+  $('#scatter').innerHTML = s;
+  const order=[['Improving','new opportunities often start here'],['Leading','strong & getting stronger'],['Weakening','strong but slowing'],['Lagging','weak vs Nifty']];
+  $('#zones').innerHTML = order.map(([z,h])=>{ const items=rs.filter(r=>r.zone===z).sort((a,b)=>b.rs_1m-a.rs_1m);
+    return `<div class="zone"><h3 style="color:${ZC[z]}">${z} (${items.length})</h3><p class="muted">${h}</p>`+
+      items.map(r=>`<div class="chip" data-s="${r.slug}"><span>${r.name}</span><span class="${cls(r.rs_1m)}">${fmtPct(r.rs_1m)}</span></div>`).join('')+'</div>'; }).join('');
+}
+
+// ---------- watchlist
+async function drawWatch(){
+  let names = S.settings.watchlist||[], auto=false;
+  if(!names.length){ auto=true; names = S.list.filter(r=>r.zone==='Improving' && r.daily_tracked).sort((a,b)=>b.rs_1m-a.rs_1m).slice(0,8).map(r=>r.name); }
+  $('#watchHint').style.display = auto ? 'block':'none';
+  $('#watchHint').innerHTML = 'Your watchlist is empty, so this shows the sectors in the <b>Improving</b> zone (possible new opportunities). Tell Claude which sectors to watch and they will appear here.';
+  const box=$('#minis'); box.innerHTML='';
+  for(const name of names){ const r=S.list.find(x=>x.name===name); if(!r) continue;
+    const el=document.createElement('div'); el.className='mini';
+    el.innerHTML=`<div class="hd" data-s="${r.slug}"><b>${r.name}</b><span><span class="${cls(r.chg_1d)}">${fmtPct(r.chg_1d)}</span> · RSI ${r.rsi14??'–'}</span></div><div class="box"></div>`;
+    box.appendChild(el);
+    const d=await load(r.slug), rows=d.daily.slice(-90);
+    const ch=LightweightCharts.createChart(el.querySelector('.box'), {...chartOpts(), handleScroll:false, handleScale:false});
+    candleSeries(ch).setData(hollow(rows)); maLines(ch, d.daily, 'daily').forEach(x=>{ const keep=new Set(rows.map(z=>z[0])); x.s.setData(x.s.data().filter(p=>keep.has(p.time))); });
+    ch.timeScale().fitContent();
   }
-  chart.timeScale().fitContent();
-  const last = rows[rows.length-1];
-  const src = d.source==='etf' ? `<span class="tag">ETF ${d.etf}</span>` : '';
-  const mas = document.getElementById('ma').checked ? MA[tf].map(([n,c])=>`<span style="color:${c}">${n}</span>`).join(' · ')+` ${tf==='daily'?'day':tf==='weekly'?'week':'month'} avg` : '';
-  document.getElementById('legend').innerHTML = `<b>${d.name}</b>${src}<br>${last[0]} · O ${last[1]} H ${last[2]} L ${last[3]} C ${last[4]}<br>${mas}`;
-  history.replaceState(null,'',`#${cur}/${tf}`);
 }
-const COLS = [['name','Index'],['sector','Sector'],['close','Close'],['chg_1d','1D'],['chg_1w','1W'],['chg_1m','1M'],['chg_1y','1Y'],['rsi14','RSI 14'],['from_52w_high','From 52W high'],['above_50dma','> 50 DMA'],['above_200dma','> 200 DMA'],['last_date','Data date']];
-function table(){
-  const th = COLS.map(([k,l])=>`<th data-k="${k}">${l}${sortKey===k?(sortDir<0?' ▼':' ▲'):''}</th>`).join('');
-  document.querySelector('#tbl thead').innerHTML = `<tr>${th}</tr>`;
-  const rows = [...list].sort((a,b)=>{ const x=a[sortKey], y=b[sortKey]; if(x==null) return 1; if(y==null) return -1; return (x>y?1:x<y?-1:0)*sortDir; });
-  document.querySelector('#tbl tbody').innerHTML = rows.map(r=>`<tr data-s="${r.slug}">`+COLS.map(([k])=>{
-    let v=r[k];
-    if(k.startsWith('chg_')||k==='from_52w_high') return `<td>${fmt(v)}</td>`;
-    if(k.startsWith('above_')) return `<td>${v==null?'':v?'<span class="pos">yes</span>':'<span class="neg">no</span>'}</td>`;
-    if(k==='name') return `<td>${v}${r.source==='etf'?'<span class="tag">ETF</span>':''}${r.daily_tracked?'':'<span class="tag">monthly</span>'}</td>`;
-    return `<td>${v??''}</td>`; }).join('')+'</tr>').join('');
-}
-document.querySelector('#tbl thead').addEventListener('click',e=>{ const k=e.target.closest('th')?.dataset.k; if(!k) return; sortDir = sortKey===k ? -sortDir : -1; sortKey=k; table(); });
-document.querySelector('#tbl tbody').addEventListener('click',e=>{ const s=e.target.closest('tr')?.dataset.s; if(s){ cur=s; document.getElementById('pick').value=s; draw(); window.scrollTo({top:0,behavior:'smooth'}); } });
-document.getElementById('pick').addEventListener('change',e=>{ cur=e.target.value; draw(); });
-document.getElementById('ma').addEventListener('change',draw);
-document.querySelectorAll('[data-tf]').forEach(b=>b.addEventListener('click',()=>{ tf=b.dataset.tf; document.querySelectorAll('[data-tf]').forEach(x=>x.classList.toggle('on',x===b)); draw(); }));
+
+// ---------- navigation
+function show(v){ S.view=v; document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on', e.id==='v-'+v));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
+  $('#title').textContent = {today:'Today', rotation:'Rotation vs Nifty 50', watch:'Watchlist', chart:'Chart'}[v];
+  $('#todayCtl').style.display = v==='today'?'flex':'none'; $('#chartCtl').style.display = v==='chart'?'flex':'none';
+  if(v==='rotation') drawRotation(); if(v==='watch') drawWatch(); if(v==='chart') drawMain();
+  history.replaceState(null,'', v==='chart' ? `#chart/${S.cur}/${S.tf}` : `#${v}`); window.scrollTo(0,0); }
+function openChart(slug){ S.cur=slug; show('chart'); }
+document.addEventListener('click', e=>{ const t=e.target.closest('[data-s]'); if(t && !t.closest('nav')) openChart(t.dataset.s); });
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.v)));
+document.querySelectorAll('#metric button').forEach(b=>b.addEventListener('click',()=>{ S.metric=b.dataset.m; document.querySelectorAll('#metric button').forEach(x=>x.classList.toggle('on',x===b)); drawToday(); }));
+document.querySelectorAll('#tfSeg button').forEach(b=>b.addEventListener('click',()=>{ S.tf=b.dataset.tf; document.querySelectorAll('#tfSeg button').forEach(x=>x.classList.toggle('on',x===b)); drawMain(); history.replaceState(null,'',`#chart/${S.cur}/${S.tf}`); }));
+$('#pick').addEventListener('change', e=>{ S.cur=e.target.value; drawMain(); history.replaceState(null,'',`#chart/${S.cur}/${S.tf}`); });
 
 (async()=>{
-  const idx = await (await fetch('data/index.json')).json();
-  list = idx.indices; document.getElementById('updated').textContent = 'Updated ' + idx.updated;
-  const groups = {}; list.forEach(r=>{ const g = r.daily_tracked ? 'Tracked daily' : 'Monthly only'; (groups[g]=groups[g]||[]).push(r); });
-  document.getElementById('pick').innerHTML = Object.entries(groups).map(([g,rs])=>`<optgroup label="${g}">`+rs.sort((a,b)=>a.name.localeCompare(b.name)).map(r=>`<option value="${r.slug}">${r.name}</option>`).join('')+'</optgroup>').join('');
-  const [h, htf] = location.hash.slice(1).split('/');
-  cur = list.some(r=>r.slug===h) ? h : (list.find(r=>r.slug==='nifty-bank')||list[0]).slug;
-  if(htf && MA[htf]){ tf=htf; document.querySelectorAll('[data-tf]').forEach(x=>x.classList.toggle('on',x.dataset.tf===tf)); }
-  document.getElementById('pick').value = cur;
-  table(); draw();
+  const [idx, st] = await Promise.all([fetch('data/index.json').then(r=>r.json()), fetch('data/settings.json').then(r=>r.json())]);
+  S.list = idx.indices; S.settings = st; $('#updated').textContent = idx.updated;
+  const grp = (r)=> r.benchmark ? 'Benchmark' : r.daily_tracked ? 'Tracked daily' : 'Monthly only';
+  const gs={}; S.list.forEach(r=>(gs[grp(r)]=gs[grp(r)]||[]).push(r));
+  $('#pick').innerHTML = ['Benchmark','Tracked daily','Monthly only'].filter(g=>gs[g]).map(g=>`<optgroup label="${g}">`+gs[g].sort((a,b)=>a.name.localeCompare(b.name)).map(r=>`<option value="${r.slug}">${r.name}</option>`).join('')+'</optgroup>').join('');
+  S.cur = (S.list.find(r=>r.slug==='nifty-bank')||S.list[0]).slug;
+  drawToday();
+  const h = location.hash.slice(1).split('/');
+  if(h[0]==='chart' && S.list.some(r=>r.slug===h[1])){ S.cur=h[1]; if(['daily','weekly','monthly'].includes(h[2])){ S.tf=h[2]; document.querySelectorAll('#tfSeg button').forEach(x=>x.classList.toggle('on',x.dataset.tf===S.tf)); } show('chart'); }
+  else if(['rotation','watch'].includes(h[0])) show(h[0]);
 })();
 </script>
 </body>

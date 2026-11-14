@@ -13,19 +13,20 @@
 #   indices:    all  (default)  or a list of names exactly as in config/daily.yaml
 #   enabled:    true / false
 #
-# These are STARTER rules so the system has something to check. Tell Claude your own
+# Moving-average alerts now live in config/watch.yaml (your MA setup).
+# The rules below are extra checks. These are STARTER rules so the system has something to check. Tell Claude your own
 # rules in plain words and they will be added here.
 
 rules:
   - name: Close crossed ABOVE the 50-day average (trend turning up)
     timeframe: daily
     when: cross_above(close, sma(close, 50))
-    enabled: true
+    enabled: false   # replaced by the moving-average setup in config/watch.yaml
 
   - name: Close crossed BELOW the 50-day average (trend turning down)
     timeframe: daily
     when: cross_below(close, sma(close, 50))
-    enabled: true
+    enabled: false   # replaced by the moving-average setup in config/watch.yaml
 
   - name: RSI(14) dropped below 30 (oversold)
     timeframe: daily
@@ -45,19 +46,19 @@ rules:
   - name: Weekly close crossed ABOVE the 20-week average
     timeframe: weekly
     when: cross_above(close, sma(close, 20))
-    enabled: true
+    enabled: false   # replaced by the moving-average setup in config/watch.yaml
 
   - name: Weekly close crossed BELOW the 20-week average
     timeframe: weekly
     when: cross_below(close, sma(close, 20))
-    enabled: true
+    enabled: false   # replaced by the moving-average setup in config/watch.yaml
 
   - name: Monthly close crossed ABOVE the 10-month average
     timeframe: monthly
     when: cross_above(close, sma(close, 10))
-    enabled: true
+    enabled: false   # replaced by the moving-average setup in config/watch.yaml
 
   - name: Monthly close crossed BELOW the 10-month average
     timeframe: monthly
     when: cross_below(close, sma(close, 10))
-    enabled: true
+    enabled: false   # replaced by the moving-average setup in config/watch.yaml

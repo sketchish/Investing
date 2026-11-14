@@ -5,6 +5,12 @@
 #   etf   -> the ETF's own candles on NSE (used when no index data is available, e.g. BSE indices, gold, silver)
 # To add an index: copy a block, change the names. 'nifty' must match the name on niftyindices.com exactly.
 indices:
+- name: Nifty 50
+  sector: Benchmark
+  nifty: NIFTY 50
+  yahoo: ^NSEI
+  etf: NIFTYBEES
+  benchmark: true   # used to measure each sector's strength; no alerts
 - name: Nifty Bank
   sector: Banking
   nifty: NIFTY BANK
