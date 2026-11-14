@@ -21,7 +21,7 @@ import requests
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data" / "daily"
-HISTORY_YEARS = 5          # how far back to go the first time
+HISTORY_YEARS = 10         # how far back to go (where the source has it)
 REFRESH_DAYS = 30          # how much to re-download on later runs
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -139,6 +139,26 @@ def update_index(item: dict, nse: NiftyIndices | None, today: date) -> Result:
     # never mix index points and ETF prices in one file: stick to the source already on file
     if prev_source:
         tries.sort(key=lambda t: 0 if t[0] == prev_source else 1)
+
+    # one-time backfill: file starts later than the target and we have not tried going further back yet
+    marker = path.with_suffix(".backfilled")
+    target = today - timedelta(days=365 * HISTORY_YEARS)
+    if not old.empty and not marker.exists() and old["date"].min().date() > target + timedelta(days=20):
+        src0 = prev_source or ""
+        older_fn = {"nifty": (lambda s, e: nse.history(item["nifty"], s, e)) if (item.get("nifty") and nse) else None,
+                    "yahoo": (lambda s, e: yahoo_history(item["yahoo"], s, e)) if item.get("yahoo") else None,
+                    "etf": (lambda s, e: yahoo_history(item["etf"] + ".NS", s, e)) if item.get("etf") else None}.get(src0)
+        if older_fn:
+            try:
+                older = older_fn(target, old["date"].min().date() - timedelta(days=1))
+                if not older.empty:
+                    old = pd.concat([older, old], ignore_index=True)
+                    old["date"] = pd.to_datetime(old["date"])
+                    old = old.drop_duplicates("date", keep="last").sort_values("date")
+                    print(f"  backfilled {item['name']}: +{len(older)} older candles")
+                marker.write_text(today.isoformat())
+            except Exception as e:  # noqa: BLE001
+                print(f"  backfill failed for {item['name']}: {e}")
 
     errors = []
     for src, fn in tries:

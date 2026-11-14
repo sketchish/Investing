@@ -129,7 +129,7 @@ const UP='#22a06b', DN='#e5484d', BG='#0f1115';
 function hollow(rows){ return rows.map((r,i)=>{ const prev=i?rows[i-1][4]:r[1]; const col=r[4]>=prev?UP:DN; const bull=r[4]>=r[1];
   return { time:r[0], open:r[1], high:r[2], low:r[3], close:r[4], color: bull?'rgba(0,0,0,0)':col, borderColor:col, wickColor:col }; }); }
 const chartOpts = h => ({ layout:{ background:{color:BG}, textColor:'#c9cfdc', fontSize:11 }, grid:{ vertLines:{visible:false}, horzLines:{visible:false} },
-  rightPriceScale:{ borderColor:'#262b36', minimumWidth:78 }, timeScale:{ borderColor:'#262b36', rightOffset:3 }, crosshair:{ mode:0 }, autoSize:true, handleScale:{ axisPressedMouseMove:{ time:true, price:true }, axisDoubleClickReset:true, mouseWheel:true, pinch:true } });
+  rightPriceScale:{ borderColor:'#262b36', minimumWidth:78 }, timeScale:{ borderColor:'#262b36', rightOffset:3 }, localization:{ dateFormat:'dd MMM yyyy' }, crosshair:{ mode:0, vertLine:{ labelVisible:true, labelBackgroundColor:'#394050' }, horzLine:{ labelBackgroundColor:'#394050' } }, autoSize:true, handleScale:{ axisPressedMouseMove:{ time:true, price:true }, axisDoubleClickReset:true, mouseWheel:true, pinch:true } });
 function candleSeries(ch){ return ch.addCandlestickSeries({ upColor:'rgba(0,0,0,0)', downColor:DN, borderVisible:true, wickVisible:true, priceLineVisible:false }); }
 function maLines(ch, rows, tf){ const closes=rows.map(r=>r[4]); return (S.settings.moving_averages[tf]||[]).map(m=>{
   const vals = (m.type||'SMA').toUpperCase()==='EMA' ? ema(closes,m.length) : sma(closes,m.length);
@@ -151,6 +151,15 @@ function buildMain(){
   let lock=false; const sync=(a,b)=>a.timeScale().subscribeVisibleLogicalRangeChange(r=>{ if(lock||!r) return; lock=true; b.timeScale().setVisibleLogicalRange(r); lock=false; });
   sync(pc,rc); sync(rc,pc);
   main = { pc, rc, cs, rs, mas:[] };
+  let mirror=false;
+  const onMove=(src,dst,dstSeries,dstVal)=>src.subscribeCrosshairMove(p=>{
+    if(mirror) return;
+    if(!p || !p.time){ legendAt(main.rows ? main.rows.length-1 : null); mirror=true; dst.clearCrosshairPosition(); mirror=false; return; }
+    const i=main.index.get(p.time); legendAt(i);
+    mirror=true; const v=dstVal(i); if(v!=null) dst.setCrosshairPosition(v, p.time, dstSeries); else dst.clearCrosshairPosition(); mirror=false;
+  });
+  onMove(pc, rc, rs, i=>main.rsiVals[i]);
+  onMove(rc, pc, cs, i=>main.rows[i]?.[4]);
 }
 async function drawMain(){
   if(!main) buildMain();
@@ -160,12 +169,27 @@ async function drawMain(){
   const r = rsi(rows.map(x=>x[4]), S.settings.rsi.length||14);
   main.rs.setData(rows.map((x,i)=>r[i]==null?{time:x[0]}:{time:x[0], value:+r[i].toFixed(1)}));
   const n=rows.length; main.pc.timeScale().setVisibleLogicalRange({ from:Math.max(0,n-(S.tf==='daily'?130:S.tf==='weekly'?104:72)), to:n+2 });
-  const last=rows[n-1], prev=rows[n-2]||last, ch=(last[4]/prev[4]-1)*100;
-  const unit={daily:'D',weekly:'W',monthly:'M'}[S.tf];
-  $('#legend').innerHTML = `<b>${d.name}</b> ${d.source==='etf'?`<span class="tag">ETF ${d.etf}</span>`:''}<br>${last[0]} · C ${last[4].toLocaleString('en-IN')} <span class="${cls(ch)}">${fmtPct(ch)}</span><br>`+
-    main.mas.map(x=>`<span style="color:${x.m.color}">${x.m.type} ${x.m.length}${unit}</span>`).join(' ');
-  $('#rsiLbl').textContent = `RSI ${S.settings.rsi.length||14}: ${r[n-1]==null?'–':r[n-1].toFixed(1)}`;
+  const closes=rows.map(x=>x[4]);
+  main.d=d; main.rows=rows; main.rsiVals=r; main.index=new Map(rows.map((x,i)=>[x[0],i]));
+  main.maVals=(S.settings.moving_averages[S.tf]||[]).map(m=>((m.type||'SMA').toUpperCase()==='EMA'?ema(closes,m.length):sma(closes,m.length)));
+  legendAt(n-1);
   $('#pick').value = S.cur;
+}
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function niceDate(s){ const [y,m,d]=s.split('-').map(Number); const dt=new Date(y,m-1,d);
+  if(S.tf==='monthly') return `${MON[m-1]} ${y}`;
+  if(S.tf==='weekly') return `Week ending ${DAYS[dt.getDay()]} ${d} ${MON[m-1]} ${y}`;
+  return `${DAYS[dt.getDay()]} ${d} ${MON[m-1]} ${y}`; }
+const num=v=>v==null?'–':v.toLocaleString('en-IN',{maximumFractionDigits:2});
+function legendAt(i){
+  if(!main||!main.rows||i==null||i<0) return;
+  const rows=main.rows, d=main.d, x=rows[i], prev=rows[i-1]||x, ch=(x[4]/prev[4]-1)*100;
+  const unit={daily:'D',weekly:'W',monthly:'M'}[S.tf];
+  const mas=(S.settings.moving_averages[S.tf]||[]).map((m,k)=>`<span style="color:${m.color}">${m.type} ${m.length}${unit} ${num(main.maVals[k][i])}</span>`).join(' &nbsp;');
+  $('#legend').innerHTML = `<b>${d.name}</b> ${d.source==='etf'?`<span class="tag">ETF ${d.etf}</span>`:''}<br>`+
+    `<span style="color:#e6e8ee">${niceDate(x[0])}</span><br>O ${num(x[1])} &nbsp;H ${num(x[2])} &nbsp;L ${num(x[3])} &nbsp;C ${num(x[4])} <span class="${cls(ch)}">${fmtPct(ch)}</span><br>${mas}`;
+  const rv=main.rsiVals[i];
+  $('#rsiLbl').textContent = `RSI ${S.settings.rsi.length||14}: ${rv==null?'–':rv.toFixed(1)}`;
 }
 
 // ---------- today

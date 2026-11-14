@@ -185,10 +185,9 @@ def build_site() -> None:
                      round(x.close, 2)] for x in d.itertuples()]
 
         w, m = resample(df, "W-FRI"), resample(df, "ME")
-        cutoff = df["date"].max() - pd.Timedelta(days=365 * 3)
         json.dump({"name": it["name"], "sector": it.get("sector", it.get("group", "")),
                    "source": source_of(it["name"]), "etf": it.get("etf"),
-                   "daily": rows(df[df["date"] >= cutoff]), "weekly": rows(w), "monthly": rows(m)},
+                   "daily": rows(df), "weekly": rows(w), "monthly": rows(m)},
                   open(SITE_DATA / f"{s}.json", "w"), separators=(",", ":"))
         c = df["close"]
         last = c.iloc[-1]
@@ -376,8 +375,8 @@ def mode_monthly():
 
 
 def mode_site():
-    """Refresh candles and the website only — no alert emails."""
-    fetch.run(cfg("daily.yaml"))
+    """Refresh candles (every index) and the website only — no alert emails."""
+    fetch.run(all_items())
     build_site()
 
 
