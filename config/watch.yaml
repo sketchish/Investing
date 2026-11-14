@@ -37,3 +37,20 @@ rsi:
   length: 14
   overbought: 70
   oversold: 30
+
+
+# ---------------------------------------------------------------------------
+# TRIGGER 1 — OTR (Old Top Retest): possible bottom formation.
+# On the WEEKLY chart: every 5 EMA top (flat consolidations too) that is higher than the
+# EMA top before it. After price breaks above it and moves well away, the old EMA top is
+# "untested". The first time price (or the 5 EMA) comes back near it -> heads-up email.
+#   price test = candle low reaches the old EMA top, the 5 EMA stays above it
+#   EMA test   = the 5 EMA itself comes down to it -> deep buying opportunity
+otr:
+  enabled: true
+  ema_length: 5
+  swing_weeks: 4        # an EMA top = highest 5 EMA within 4 weeks either side
+  move_away_pct: 10     # after breaking out, a weekly low must be >= 10% above the old top
+  heads_up_pct: 2       # ALERT: first day price or 5 EMA comes within 2% of the untested old top
+  test_pct: 1.5         # within 1.5% = a test (reports and charts)
+  broken_pct: 3         # 5 EMA closes > 3% below the old top = level broken

@@ -18,6 +18,7 @@ import yaml
 from . import fetch, notify
 from .indicators import resample, rsi, sma
 from .rules import applies_to, check
+from . import otr
 
 ROOT = fetch.ROOT
 SITE_DATA = ROOT / "site" / "data"
@@ -185,7 +186,8 @@ def build_site() -> None:
                      round(x.close, 2)] for x in d.itertuples()]
 
         w, m = resample(df, "W-FRI"), resample(df, "ME")
-        json.dump({"name": it["name"], "sector": it.get("sector", it.get("group", "")),
+        zs = otr.levels(df, wcfg.get("otr") or {}) if ((wcfg.get("otr") or {}).get("enabled") and len(df) >= 200) else []
+        json.dump({"name": it["name"], "sector": it.get("sector", it.get("group", "")), "zones": zs,
                    "source": source_of(it["name"]), "etf": it.get("etf"),
                    "daily": rows(df), "weekly": rows(w), "monthly": rows(m)},
                   open(SITE_DATA / f"{s}.json", "w"), separators=(",", ":"))
@@ -205,6 +207,8 @@ def build_site() -> None:
             "from_52w_high": pct(last, df["high"].tail(252).max()),
             "benchmark": bool(it.get("benchmark")),
             **ma_state(df, wcfg),
+            **({"otr": (lambda z: z and {"level": z["level"], "dist": z["distance_pct"], "since": z["top_week"][:7]})(
+                   otr.nearest_untested(df, wcfg.get("otr") or {}))} if ((wcfg.get("otr") or {}).get("enabled") and len(df) >= 200) else {}),
             **({} if it.get("benchmark") else strength(df, bench)),
         })
     json.dump({"updated": datetime.now(IST).strftime("%d %b %Y %H:%M IST"), "indices": listing},
@@ -238,6 +242,54 @@ def run_rules(tf: str, items: list[dict]) -> list[dict]:
     return hits
 
 
+def otr_cfg() -> dict:
+    return watch().get("otr") or {}
+
+
+def otr_hits(items: list[dict]) -> list[dict]:
+    rc = otr_cfg()
+    if not rc.get("enabled"):
+        return []
+    hits = []
+    for it in items:
+        if it.get("benchmark"):
+            continue
+        df = candles(it["name"])
+        if df is None or len(df) < 200:
+            continue
+        for z in otr.heads_up_today(df, rc):
+            last = df.iloc[-1]
+            hits.append({"rule": f"OTR heads-up: within {rc.get('heads_up_pct', 2)}% of an UNTESTED old EMA top (possible bottom)",
+                         "index": it["name"], "date": last["date"].strftime("%d %b %Y"),
+                         "close": round(float(last["close"]), 2), "source": source_of(it["name"]), "etf": it.get("etf"),
+                         "detail": f"old weekly 5 EMA top {z['level']:,.2f} (week of {z['top_week']}); "
+                                   f"today's low {z['heads_up_low']:,.2f}, weekly 5 EMA {z['heads_up_ema']:,.2f}"})
+    return hits
+
+
+def otr_markdown(items: list[dict], within: float = 6.0) -> str:
+    rc = otr_cfg()
+    near, live = [], []
+    for it in items:
+        if it.get("benchmark"):
+            continue
+        df = candles(it["name"])
+        if df is None or len(df) < 200:
+            continue
+        for z in otr.levels(df, rc):
+            if z.get("state") == "in progress":
+                live.append(f"| {it['name']} | {z['level']:,.2f} ({z['top_week'][:7]}) | {z['heads_up_date']} | "
+                            f"{z['low']:,.2f} | {z['kind']} | +{z['bounce_pct']}% |")
+        n = otr.nearest_untested(df, rc)
+        if n and n["distance_pct"] <= within:
+            near.append((n["distance_pct"], f"| {it['name']} | {df['close'].iloc[-1]:,.2f} | {n['level']:,.2f} ({n['top_week'][:7]}) | {n['distance_pct']:+.2f}% |"))
+    out = "**OTR tests in progress** (came back to an old EMA top in the last 6 months, level holding)\n\n"
+    out += ("| Sector | Old EMA top | Heads-up | Low | Type | Bounce so far |\n|---|---|---|---|---|---|\n" + "\n".join(live)) if live else "_None._"
+    out += f"\n\n**Getting close** (within {within}% of an untested old EMA top)\n\n"
+    out += ("| Sector | Close | Untested old EMA top | Price above it |\n|---|---|---|---|\n" + "\n".join(r for _, r in sorted(near))) if near else "_None._"
+    return out + "\n"
+
+
 def hits_markdown(hits: list[dict]) -> str:
     if not hits:
         return "_No alert rules fired._\n"
@@ -247,6 +299,8 @@ def hits_markdown(hits: list[dict]) -> str:
         for h in [h for h in hits if h["rule"] == rule]:
             src = "index" if h["source"] in ("nifty", "yahoo") else "ETF price"
             out.append(f"| {h['index']} | {h['date']} | {h['close']:,} | {src} | {h['etf'] or ''} |")
+            if h.get("detail"):
+                out.append(f"| ↳ {h['detail']} | | | | |")
         out.append("")
     return "\n".join(out)
 
@@ -328,7 +382,7 @@ def mode_daily():
     items = cfg("daily.yaml")
     res = fetch.run(items)
     build_site()
-    hits = run_rules("daily", items)
+    hits = run_rules("daily", items) + otr_hits(items)
     failed = [r for r in res if r.error and not r.last]
     today = datetime.now(IST).strftime("%d %b %Y")
     md = f"## Daily sector alerts — {today}\n\n{hits_markdown(hits)}\n\nCharts: {site_link()}\n"
@@ -351,6 +405,7 @@ def mode_weekly():
     table = table_of_changes([i for i in items if not i.get("benchmark")], "weekly",
                              {"1W": 1, "4W": 4, "13W": 13, "52W": 52})
     md = (f"## Weekly sector review — week ending {today}\n\n### Alerts\n\n{hits_markdown(hits)}\n"
+          f"### OTR — possible bottoms\n\n{otr_markdown(items)}\n"
           f"### Rotation vs Nifty 50\n\n{rotation_markdown(items)}\n"
           f"### All tracked sectors, best week first\n\n{table}\n\n_Trend = weekly close vs 20-week average._\n\n"
           f"Charts: {site_link()}\n")
@@ -374,6 +429,31 @@ def mode_monthly():
                 hits_text(hits) + f"\nFull table: {site_link()}", ["monthly"])
 
 
+def mode_otr_test():
+    """One-off: email every OTR heads-up of the last 6 months, to check the alert end to end."""
+    rc, since = otr_cfg(), (date.today() - timedelta(days=183)).isoformat()
+    hits = []
+    for it in cfg("daily.yaml"):
+        if it.get("benchmark"):
+            continue
+        df = candles(it["name"])
+        if df is None or len(df) < 200:
+            continue
+        for z in otr.levels(df, rc):
+            if z.get("heads_up_date", "") >= since:
+                hits.append({"rule": "OTR heads-up (replayed)", "index": it["name"],
+                             "date": pd.Timestamp(z["heads_up_date"]).strftime("%d %b %Y"),
+                             "close": z["heads_up_low"], "source": source_of(it["name"]), "etf": it.get("etf"),
+                             "detail": f"old 5 EMA top {z['level']:,.2f} ({z['top_week'][:7]}) · {z['kind']} · "
+                                       f"low {z['low']:,.2f} · bounce +{z['bounce_pct']}% · {z['state']}"})
+    hits.sort(key=lambda h: pd.Timestamp(h["date"]), reverse=True)
+    md = ("## TEST — OTR heads-ups of the last 6 months\n\nThis is a one-off test. Each row is a day the OTR "
+          "heads-up would have been sent. The 'Close' column shows that day's low.\n\n" + hits_markdown(hits)
+          + f"\n### Today's OTR picture\n\n{otr_markdown(cfg('daily.yaml'))}\nCharts: {site_link()}\n")
+    write_report("otr-test", md)
+    notify.send(f"TEST — OTR heads-ups, last 6 months ({len(hits)})", md, hits_text(hits) + f"\n{site_link()}", ["otr", "test"])
+
+
 def mode_site():
     """Refresh candles (every index) and the website only — no alert emails."""
     fetch.run(all_items())
@@ -381,4 +461,4 @@ def mode_site():
 
 
 if __name__ == "__main__":
-    {"daily": mode_daily, "weekly": mode_weekly, "monthly": mode_monthly, "site": mode_site}[sys.argv[1]]()
+    {"daily": mode_daily, "weekly": mode_weekly, "monthly": mode_monthly, "site": mode_site, "otr-test": mode_otr_test}[sys.argv[1]]()

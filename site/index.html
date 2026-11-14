@@ -76,7 +76,7 @@
   <section class="view on" id="v-today">
     <div class="bench" id="bench"></div>
     <div class="grid" id="tiles"></div>
-    <p class="muted" style="margin-top:10px">Tap a sector to open its chart. ▲/▼ = last daily close above/below your 5 EMA (● = crossed today). <span class="tag">ETF</span> = ETF price, no free index data.</p>
+    <p class="muted" style="margin-top:10px">Tap a sector to open its chart. ▲/▼ = last daily close above/below your 5 EMA (● = crossed today). <span style="color:#f5d76e">OTR</span> = within 6% of an untested old weekly 5 EMA top (possible bottom zone). <span class="tag">ETF</span> = ETF price, no free index data.</p>
     <h2>Monthly-only sectors</h2>
     <div class="grid" id="tilesM"></div>
   </section>
@@ -98,7 +98,7 @@
       <div id="priceBox"></div>
       <div style="position:relative"><span class="rsiLbl" id="rsiLbl" style="top:4px"></span><div id="rsiBox"></div></div>
     </div>
-    <p class="muted">Hollow candle = closed above its open, filled = closed below its open. Green/red = higher/lower than the previous close.</p>
+    <p class="muted">Hollow candle = closed above its open, filled = closed below its open. Green/red = higher/lower than the previous close. Dashed lines = OTR levels (old weekly 5 EMA tops): green = untested, orange = tested in the last year, red = tested and broken.</p>
   </section>
 </main>
 
@@ -165,6 +165,13 @@ async function drawMain(){
   if(!main) buildMain();
   const d = await load(S.cur); const rows = d[S.tf];
   main.cs.setData(hollow(rows));
+  (main.zl||[]).forEach(l=>main.cs.removePriceLine(l)); main.zl=[];
+  const lastC=rows[rows.length-1][4], yearAgo=new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+  (d.zones||[]).filter(z=>(z.status==='untested' && z.level<lastC*1.4 && z.level>lastC*0.6) || (z.heads_up_date && z.heads_up_date>=yearAgo)).forEach(z=>{
+    const tested=z.status==='tested', col = !tested ? '#22a06b' : (z.state==='broken' ? '#ff5c5c' : '#f5a524');
+    const lab = !tested ? `OTR ${z.top_week.slice(0,7)} – untested` : `OTR ${z.top_week.slice(0,7)} – ${z.state} (${z.kind.replace(' (deep buy)','')}, ${z.heads_up_date.slice(0,7)})`;
+    main.zl.push(main.cs.createPriceLine({ price:z.level, color:col, lineWidth:1, lineStyle:2, axisLabelVisible:true, title:lab }));
+  });
   main.mas.forEach(x=>main.pc.removeSeries(x.s)); main.mas = maLines(main.pc, rows, S.tf);
   const r = rsi(rows.map(x=>x[4]), S.settings.rsi.length||14);
   main.rs.setData(rows.map((x,i)=>r[i]==null?{time:x[0]}:{time:x[0], value:+r[i].toFixed(1)}));
@@ -197,7 +204,7 @@ function tileColor(v){ if(v==null) return '#1b1f27'; const a=Math.min(Math.abs(v
   return v>=0 ? `rgba(34,160,107,${0.15+0.6*a})` : `rgba(229,72,77,${0.15+0.6*a})`; }
 function tile(r){ const v=r[S.metric]; const arrow = r.d_above==null?'':(r.d_above?'▲':'▼')+(r.d_cross?'●':'');
   return `<div class="tile" style="background:${tileColor(v)}" data-s="${r.slug}"><div class="n">${r.name}${r.source==='etf'?' <span class="tag">ETF</span>':''}</div>
-    <div class="v">${fmtPct(v)}</div><div class="s"><span>${arrow} 5EMA</span><span>RSI ${r.rsi14??'–'}</span></div></div>`; }
+    <div class="v">${fmtPct(v)}</div><div class="s"><span>${arrow} 5EMA</span><span>RSI ${r.rsi14??'–'}</span></div>${r.otr && r.otr.dist<=6 ? `<div class="s" style="color:#f5d76e">OTR ${r.otr.since}: ${r.otr.dist>=0?'+':''}${r.otr.dist}% away</div>`:''}</div>`; }
 function drawToday(){
   const b = S.list.find(r=>r.benchmark);
   if(b) $('#bench').innerHTML = `<div><b>Nifty 50</b><div class="muted">${b.last_date}</div></div><div style="text-align:right"><b>${b.close.toLocaleString('en-IN')}</b><div class="${cls(b[S.metric==='rs_1m'?'chg_1m':S.metric])}">${fmtPct(b[S.metric==='rs_1m'?'chg_1m':S.metric])}</div></div>`;
