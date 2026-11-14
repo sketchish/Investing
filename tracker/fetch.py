@@ -62,7 +62,7 @@ class NiftyIndices:
             return pd.DataFrame(columns=COLS)
         df = pd.DataFrame(rows)
         out = pd.DataFrame({
-            "date": pd.to_datetime(df["HistoricalDate"], format="%d %b %Y"),
+            "date": pd.to_datetime(df.get("HistoricalDate", df.get("HistoricalDate ")), format="mixed", dayfirst=True, errors="coerce"),
             "open": pd.to_numeric(df["OPEN"], errors="coerce"),
             "high": pd.to_numeric(df["HIGH"], errors="coerce"),
             "low": pd.to_numeric(df["LOW"], errors="coerce"),
@@ -159,7 +159,17 @@ def update_index(item: dict, nse: NiftyIndices | None, today: date) -> Result:
         df = pd.concat([base, new], ignore_index=True)
         df["date"] = pd.to_datetime(df["date"])
         df = df.drop_duplicates("date", keep="last").sort_values("date")
-        df = df[(df["high"] >= df["low"]) & (df["close"] > 0)]
+        # some indices publish only a closing value on some days: fill the missing open/high/low with it
+        for col in ("open", "high", "low"):
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+            df.loc[df[col].isna() | (df[col] <= 0), col] = df["close"]
+        df["high"] = df[["open", "high", "low", "close"]].max(axis=1)
+        df["low"] = df[["open", "high", "low", "close"]].min(axis=1)
+        df = df.dropna(subset=["date", "close"])
+        df = df[df["close"] > 0]
+        if df.empty:
+            errors.append(f"{src}: data unusable")
+            continue
         DATA.mkdir(parents=True, exist_ok=True)
         df.to_csv(path, index=False, date_format="%Y-%m-%d")
         meta_path.write_text(src)
@@ -177,7 +187,10 @@ def run(items: list[dict]) -> list[Result]:
         nse = None
     results = []
     for it in items:
-        r = update_index(it, nse, today)
+        try:
+            r = update_index(it, nse, today)
+        except Exception as e:  # noqa: BLE001 - one bad index must not stop the run
+            r = Result(it["name"], "-", 0, None, f"crashed: {e}")
         flag = "OK " if not r.error else "ERR"
         print(f"{flag} {r.name:<45} {r.source:<6} rows={r.rows:<5} last={r.last} {r.error or ''}")
         results.append(r)
