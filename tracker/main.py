@@ -31,12 +31,19 @@ def cfg(name: str) -> list[dict]:
 
 
 def all_items() -> list[dict]:
+    """Daily list first, then monthly-only indices (same index never listed twice)."""
     seen, out = set(), []
     for it in cfg("daily.yaml") + cfg("monthly.yaml"):
-        if it["name"] not in seen:
-            seen.add(it["name"])
+        key = it.get("nifty") or it.get("etf") or it["name"]
+        if key not in seen:
+            seen.add(key)
             out.append(it)
     return out
+
+
+def monthly_only() -> list[dict]:
+    daily = {it["name"] for it in cfg("daily.yaml")}
+    return [it for it in all_items() if it["name"] not in daily]
 
 
 def candles(name: str) -> pd.DataFrame | None:
@@ -225,10 +232,9 @@ def mode_weekly():
 
 
 def mode_monthly():
-    items = cfg("monthly.yaml")
-    fetch.run(items)
+    fetch.run(monthly_only())   # the daily ones are already fresh
     build_site()
-    hits = run_rules("monthly", items + cfg("daily.yaml"))
+    hits = run_rules("monthly", all_items())
     month = (date.today().replace(day=1) - timedelta(days=1)).strftime("%B %Y")
     table = table_of_changes(all_items(), "monthly", {"1M": 1, "3M": 3, "6M": 6, "12M": 12})
     md = (f"## Monthly all-sector review — {month}\n\n### Alerts\n\n{hits_markdown(hits)}\n"

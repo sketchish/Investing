@@ -160,9 +160,10 @@ def update_index(item: dict, nse: NiftyIndices | None, today: date) -> Result:
         df["date"] = pd.to_datetime(df["date"])
         df = df.drop_duplicates("date", keep="last").sort_values("date")
         # some indices publish only a closing value on some days: fill the missing open/high/low with it
+        df["close"] = pd.to_numeric(df["close"], errors="coerce").astype(float)
         for col in ("open", "high", "low"):
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-            df.loc[df[col].isna() | (df[col] <= 0), col] = df["close"]
+            v = pd.to_numeric(df[col], errors="coerce").astype(float)
+            df[col] = v.where(v.notna() & (v > 0), df["close"])
         df["high"] = df[["open", "high", "low", "close"]].max(axis=1)
         df["low"] = df[["open", "high", "low", "close"]].min(axis=1)
         df = df.dropna(subset=["date", "close"])
