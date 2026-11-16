@@ -62,7 +62,7 @@ Second chance if the OTR bottom was missed.
 
 ## How it runs
 
-- `.github/workflows/tracker.yml` (UTC cron): daily Mon–Fri 12:45 (6:15 pm IST), weekly Sat 03:15, monthly 1st 01:30.
+- `.github/workflows/tracker.yml` (UTC cron): daily Mon–Fri 12:40 (6:10 pm IST), weekly Sat 03:10, monthly 1st 01:25.
   Manual modes: `daily, weekly, monthly, site, otr-test, plt-test`.
 - Code: `tracker/fetch.py` (niftyindices.com → yahoo → ETF price fallback), `indicators.py`, `rules.py`, `notify.py`,
   `otr.py`, `plt.py`, `main.py` (site data + alerts + reports). `site/data` is built in the run, not committed.
@@ -83,6 +83,13 @@ Second chance if the OTR bottom was missed.
 - He asked where to find Nifty Hospitals on TradingView: likely not listed there (new NSE index). BSE Hospitals is a
   different index (levels don't match); ETF `NSE:GROWWHOSPI` follows BSE Hospitals.
 
+## Where we left off (17 Nov 2026)
+
+- He noticed no emails: GitHub had **never** started a scheduled run (all runs were manual). Re-registered the
+  schedule by changing the cron minutes (12:40 / 03:10 / 01:25 UTC) and ran the daily check by hand.
+  Daily emails only go out when a trigger fires (quiet days = no email). Verify scheduled runs appear
+  (`gh api "repos/sketchish/Investing/actions/runs?event=schedule"`); if still none, add a backup dispatcher.
+
 ## Open / next
 
 - [ ] **Trigger 3** — he will teach it next.
@@ -95,4 +102,5 @@ Second chance if the OTR bottom was missed.
 ## Decision log
 
 - 14 Nov 2026 — OTR adopted as trigger 1; Today screen organised by trigger.
+- 17 Nov 2026 — schedule re-registered after it never fired.
 - 15 Nov 2026 — PLT adopted as trigger 2 (option b previous low; price test = strong, EMA test = caution); full names shown with short names; bigger cards.
