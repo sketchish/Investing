@@ -1,4 +1,4 @@
-name: Sector tracker
+name: Sector tracker (daily alerts)
 
 on:
   schedule:
