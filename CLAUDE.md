@@ -75,6 +75,8 @@ Second chance if the OTR bottom was missed.
 - `gh` GraphQL is blocked: use REST, e.g.
   `gh api -X POST repos/sketchish/Investing/actions/workflows/tracker.yml/dispatches -f ref=main -f 'inputs[mode]=site'`.
 - Push: `git pull --rebase origin main` (the bot commits data) then `git -c push.negotiate=true push origin HEAD:main`.
+- **Do not push changes to `.github/workflows/tracker.yml` from the session** — GitHub ties the schedule to whoever
+  last edited it; a Claude push can switch the timer off. Edit it on github.com in his signed-in browser instead.
 - After editing `site/index.html`, syntax-check the script with `node --check` before pushing.
 
 ## Where we left off (15 Nov 2026)
@@ -93,7 +95,8 @@ Second chance if the OTR bottom was missed.
 - 17 Nov 13:30 UTC check: scheduled run STILL did not fire (0 scheduled runs ever). Ran daily by hand again (issue #8).
   Likely cause: every workflow commit was pushed by Claude's session (an app identity), and GitHub only starts
   schedules for a real user who last edited the cron. Proposed fix: Chirag (or Claude in his signed-in browser)
-  makes one small edit to `.github/workflows/tracker.yml` on github.com. Waiting for his OK.
+  makes one small edit to `.github/workflows/tracker.yml` on github.com. DONE 17 Nov: Claude edited line 1 in his
+  signed-in browser (commit 5da3b89 by Sketchish). Check `?event=schedule` runs from 18 Nov 12:40 UTC.
 
 ## Open / next
 
@@ -107,5 +110,5 @@ Second chance if the OTR bottom was missed.
 ## Decision log
 
 - 14 Nov 2026 — OTR adopted as trigger 1; Today screen organised by trigger.
-- 17 Nov 2026 — schedule re-registered after it never fired.
+- 17 Nov 2026 — schedule re-registered after it never fired; workflow then edited from Chirag's own GitHub account.
 - 15 Nov 2026 — PLT adopted as trigger 2 (option b previous low; price test = strong, EMA test = caution); full names shown with short names; bigger cards.
