@@ -90,6 +90,11 @@ Second chance if the OTR bottom was missed.
   Daily emails only go out when a trigger fires (quiet days = no email). Verify scheduled runs appear
   (`gh api "repos/sketchish/Investing/actions/runs?event=schedule"`); if still none, add a backup dispatcher.
 
+- 17 Nov 13:30 UTC check: scheduled run STILL did not fire (0 scheduled runs ever). Ran daily by hand again (issue #8).
+  Likely cause: every workflow commit was pushed by Claude's session (an app identity), and GitHub only starts
+  schedules for a real user who last edited the cron. Proposed fix: Chirag (or Claude in his signed-in browser)
+  makes one small edit to `.github/workflows/tracker.yml` on github.com. Waiting for his OK.
+
 ## Open / next
 
 - [ ] **Trigger 3** — he will teach it next.
