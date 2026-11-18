@@ -98,6 +98,11 @@ Second chance if the OTR bottom was missed.
   makes one small edit to `.github/workflows/tracker.yml` on github.com. DONE 17 Nov: Claude edited line 1 in his
   signed-in browser (commit 5da3b89 by Sketchish). Check `?event=schedule` runs from 18 Nov 12:40 UTC.
 
+- 18 Nov check: the schedule now WORKS — first automatic run ever at 17 Nov 21:17 UTC (issue #9), but GitHub
+  started it ~8.5 h late (free-tier schedules are often delayed). 18 Nov 12:40 slot had not started by 13:24 UTC.
+  Don't hand-dispatch while a scheduled run may still come (duplicate emails). Option if delays bother him:
+  a backup timer that dispatches at a fixed time.
+
 ## Open / next
 
 - [ ] **Trigger 3** — he will teach it next.
